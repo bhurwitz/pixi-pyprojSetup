@@ -2,14 +2,16 @@
 :: Much of this file was written with the help of ChatGPT, versions GPT-4o, GPT-4o mini, and o3-mini.
 :: See <https://chatgpt.com/share/67ffcd98-a7a8-800e-9dcd-8c4b78f895f8>
 :: This file is version-controlled via git and saved on GitHub under the repository <https://github.com/bhurwitz/pixi-pyprojSetup>
+::
+:: TODO: boilerplate should not be limited to warranty text.
 
 @echo off
 setlocal EnableDelayedExpansion
 
+REM === ENVIRONMENTAL VARS
 set templateDir=C:\Users\bchur\Desktop\Projects\_templates
 ::set boilerplate=%templateDir%\GNU_GPL_v3_boilerplate.txt
 set defaultDir=C:\Users\bchur\Desktop\Projects
-
 
 cd /d "%defaultDir%"
 echo The project directory will be created in "%CD%".
@@ -36,7 +38,7 @@ for /f %%I in ('powershell -NoProfile -Command "(Get-Date).Year"') do set year=%
 :: Create and enter project directory
 pixi init %package% --format pyproject
 cd %package%
-set "proj_root=%CD%"
+set proj_root="%CD%"
 
 for /f "tokens=2 delims== " %%A in ('findstr /r "^version *= *" pyproject.toml') do (
     set version=%%A
@@ -70,15 +72,7 @@ echo Selected license: %license_name%
 :: ——————————————
 :: 3) Copy the LICENSE file
 copy "%templateDir%\license_%license_name%.txt" "LICENSE.txt"
-powershell -Command ^
-  "$template = Get-Content 'LICENSE.txt' -Raw; " ^
-  "$output = $template -replace '{package}', '%package%' " ^
-                    "-replace '{author}', '%author%' " ^
-                    "-replace '{email}', '%email%' " ^
-                    "-replace '{year}', '%year%' " ^
-                    "-replace '{description}', '%description%' " ^
-                    "-replace '{license-name}', '%license_name%'; " ^
-  "Set-Content 'LICENSE.txt' $output"
+call :replace_placeholders "LICENSE.txt" "LICENSE"
 
 :: 4) Ensure a boilerplate exists in _templates
 set boilerplate=src\%package%\%license_name%_boilerplate.txt
@@ -86,15 +80,7 @@ if not exist "%templateDir%\%license_name%_boilerplate.txt" (
   echo # This file within package ^<%package%^> is copyrighted by %author% ^<%email%^> as of %year% under the %license_name% license. > "%boilerplate%"
 ) else (
   copy "%templateDir%\%license_name%_boilerplate.txt" "%boilerplate%"
-  powershell -Command ^
-        "$template = Get-Content '%boilerplate%' -Raw; " ^
-        "$output = $template -replace '{package}', '%package%' " ^
-                          "-replace '{author}', '%author%' " ^
-                          "-replace '{email}', '%email%' " ^
-                          "-replace '{year}', '%year%' " ^
-                          "-replace '{description}', '%description%' " ^
-                          "-replace '{license-name}', '%license_name%'; " ^
-        "Set-Content '%boilerplate%' $output"
+  call :replace_placeholders "%boilerplate%" "boilerplate"
 )
 
 REM === Create README.md ===
@@ -139,79 +125,51 @@ REM === Copy template files and fill as needed ===
 REM === cli.py ===
 set copiedFile=src\%package%\cli.py
 copy "%templateDir%\cli.py" %copiedFile%
-powershell -Command ^
-  "$template = Get-Content '%copiedFile%' -Raw;" ^
-  "$output = $template -replace '{package}', '%package%' " ^
-  "                      -replace '{author}', '%author%' " ^
-  "                      -replace '{email}', '%email%' " ^
-  "                      -replace '{year}', '%year%' " ^
-  "                      -replace '{description}', '%description%';" ^
-  "Set-Content '%copiedFile%' $output"
-powershell -Command ^
-  "$boilerplate = (Get-Content '%boilerplate%' | Out-String).TrimEnd();" ^
-  "$file = Get-Content '%copiedFile%' -Raw;" ^
-  "$combined = $boilerplate + \"`n`n\" + $file;" ^
-  "Set-Content '%copiedFile%' $combined"
+call :replace_placeholders "%copiedFile%" "cli.py"
+call :prepend_boilerplate "%boilerplate%" "%copiedFile%"
+REM powershell -Command ^
+  REM "$template = Get-Content '%copiedFile%' -Raw;" ^
+  REM "$output = $template -replace '{package}', '%package%' " ^
+  REM "                      -replace '{author}', '%author%' " ^
+  REM "                      -replace '{email}', '%email%' " ^
+  REM "                      -replace '{year}', '%year%' " ^
+  REM "                      -replace '{description}', '%description%';" ^
+  REM "Set-Content '%copiedFile%' $output"
+REM powershell -Command ^
+  REM "$boilerplate = (Get-Content '%boilerplate%' | Out-String).TrimEnd();" ^
+  REM "$file = Get-Content '%copiedFile%' -Raw;" ^
+  REM "$combined = $boilerplate + \"`n`n\" + $file;" ^
+  REM "Set-Content '%copiedFile%' $combined"
 
 
 REM === __main__.py ===
 set copiedFile=src\%package%\__main__.py
 copy "%templateDir%\__main__.py" %copiedFile%
-powershell -Command ^
-  "$template = Get-Content '%copiedFile%' -Raw;" ^
-  "$output = $template -replace '{package}', '%package%' " ^
-  "                      -replace '{author}', '%author%' " ^
-  "                      -replace '{email}', '%email%' " ^
-  "                      -replace '{year}', '%year%' " ^
-  "                      -replace '{description}', '%description%';" ^
-  "Set-Content '%copiedFile%' $output"
-powershell -Command ^
-  "$boilerplate = (Get-Content '%boilerplate%' | Out-String).TrimEnd();" ^
-  "$file = Get-Content '%copiedFile%' -Raw;" ^
-  "$combined = $boilerplate + \"`n`n\" + $file;" ^
-  "Set-Content '%copiedFile%' $combined"
+call :replace_placeholders "%copiedFile%" "__main__.py"
+call :prepend_boilerplate "%boilerplate%" "%copiedFile%"
 
 
   
 REM === main.py ===
-set copiedFile=main.py
+set copiedFile=main.py 
 copy "%templateDir%\main.py" %copiedFile%
-powershell -Command ^
-  "$template = Get-Content '%copiedFile%' -Raw;" ^
-  "$output = $template -replace '{package}', '%package%' " ^
-  "                      -replace '{author}', '%author%' " ^
-  "                      -replace '{email}', '%email%' " ^
-  "                      -replace '{year}', '%year%' " ^
-  "                      -replace '{description}', '%description%';" ^
-  "Set-Content '%copiedFile%' $output"
-powershell -Command ^
-  "$boilerplate = (Get-Content '%boilerplate%' | Out-String).TrimEnd();" ^
-  "$file = Get-Content '%copiedFile%' -Raw;" ^
-  "$combined = $boilerplate + \"`n`n\" + $file;" ^
-  "Set-Content '%copiedFile%' $combined"
+call :replace_placeholders "%copiedFile%" "main.py"
+call :prepend_boilerplate "%boilerplate%" "%copiedFile%"
 
 
 
 REM === Runner batch file ===
 set copiedFile=%package%_run.bat
 copy "%templateDir%\runPythonScript.bat" %copiedFile%
-
 powershell -Command ^
   "$boilerplate = ':: Copyright (C) {year}  {author} <{email}> under GNU GPL v3.0 (see LICENSE.txt for details)';" ^
   "$file = Get-Content '%copiedFile%' -Raw;" ^
   "$combined = $boilerplate + \"`n`n\" + $file;" ^
   "Set-Content '%copiedFile%' $combined"
+call :replace_placeholders "%copiedFile%" "run.bat"
+
+
   
-  
-powershell -Command ^
-  "$template = Get-Content '%copiedFile%' -Raw;" ^
-  "$output = $template -replace '{package}', '%package%' " ^
-  "                      -replace '{author}', '%author%' " ^
-  "                      -replace '{email}', '%email%' " ^
-  "                      -replace '{year}', '%year%' " ^
-  "                      -replace '{description}', '%description%' " ^
-  "                      -replace '{absPath}', '%proj_root%'; " ^
-  "Set-Content '%copiedFile%' $output"
 
 REM === Initialize Git ===
 git init
@@ -235,12 +193,8 @@ git tag -a v%version% -m "Initial release"
 REM === Push to the repo ===
 echo.
 choice /M "Would you like to push to GitHub?"
-IF ERRORLEVEL 2 GOTO skipGitHub
-gh repo create %repo_name% --private --source=. --remote=origin
-git branch -M main
-git push -u origin main
-git push origin v%version%
-:skipGitHub
+IF %ERRORLEVEL%==1 GOTO :GitHub
+:postgithub
 
 
 echo.
@@ -256,3 +210,57 @@ echo ^>^>^> Alternative, run ^'pixi run python -m %package%^' from within the pr
 echo.
 
 pause
+
+goto :eof
+
+:GitHub
+gh repo create %repo_name% --private --source=. --remote=origin
+git branch -M main
+git push -u origin main
+git push origin v%version%
+goto :postgithub
+
+
+REM === STRING REPLACEMENT METHOD
+:replace_placeholders
+:: %1 = file path to modify
+:: %2 = An optional location for debugging.
+
+if "%~1"=="" (
+    echo [ERROR][replace_placeholders] Missing file path. Called from: %~2
+    goto :eof
+)
+
+powershell -Command ^
+  "$file = Get-Content '%~1' -Raw;" ^
+  "$replacements = @{" ^
+    "'{package}' = '%package%';" ^
+    "'{author}' = '%author%';" ^
+    "'{email}' = '%email%';" ^
+    "'{year}' = '%year%';" ^
+    "'{license}' = '%license_name%';" ^
+    "'{license-name}' = '%license_name%';" ^
+    "'{description}' = '%description%';" ^
+    "'{project_name}' = '%project_name%';" ^
+    "'{absPath}' = '%proj_root%';" ^
+    "'{repo_name}' = '%repo_name%'" ^
+  "};" ^
+  "foreach ($key in $replacements.Keys) { $file = $file -replace $key, $replacements[$key] };" ^
+  "Set-Content '%~1' $file"
+
+goto :eof
+
+
+REM === PREPEND BOILERPLATE TEXT
+:prepend_boilerplate
+:: %1 = boilerplate file
+:: %2 = target file
+
+powershell -Command ^
+  "$boilerplate = Get-Content '%~1';" ^
+  "$target = Get-Content '%~2';" ^
+  "$combined = $boilerplate + '', $target;" ^
+  "$combined | Set-Content '%~2'"
+  
+
+goto :eof
