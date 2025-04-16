@@ -12,6 +12,11 @@ set /p email=Enter email address:
 set /p description=Enter a short project description (1 sentence): 
 for /f %%I in ('powershell -NoProfile -Command "(Get-Date).Year"') do set year=%%I
 
+for /f "tokens=2 delims== " %%A in ('findstr /r "^version *= *" pyproject.toml') do (
+    set version=%%A
+)
+set version=%version:"=%
+
 :: Create and enter project directory
 pixi init %package% --format pyproject
 cd %package%
@@ -30,7 +35,7 @@ copy %boilerplate% README.md
 ) > README.md
 
 REM === Copy LICENSE.txt (GNU GPL v3.0) ===
-copy "%templateDir%\GNU_GPL_v3_licenseText.txt" LICENSE.txt
+copy "%templateDir%\license_GNU_GPL_v3.txt" LICENSE.txt
 
 REM === Insert readme and license into pyproject.toml ===
 powershell -Command ^
@@ -63,7 +68,7 @@ powershell -Command ^
 
 (
 echo.
-echo __version__ = "0.1.0"
+echo __version__ = "%version%"
 echo __author__ = "Ben Hurwitz"
 ) >> %init_file%
 
@@ -146,6 +151,7 @@ REM === Initialize Git ===
 git init
 git add .
 git commit -m "Initial project setup"
+git tag -a v%version% -m "Release v%version"
 
 :: Add a few things to the .gitignore
 (
@@ -167,6 +173,7 @@ IF "%repo%"=="y" (
     gh repo create %repo_name% --private --source=. --remote=origin
     git branch -M main
     git push -u origin main
+    git push origin v%version%
 )
 
 echo.
