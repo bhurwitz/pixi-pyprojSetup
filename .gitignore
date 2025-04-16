@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS clutter:
+.DS_Store
+Thumbs.db
+.venv/
