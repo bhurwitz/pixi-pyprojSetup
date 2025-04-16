@@ -164,7 +164,9 @@ REM === Push to the repo ===
 echo.
 set /p repo=Would you like to push to GitHub? [y/n] 
 IF "%repo%"=="y" (
-    gh repo create %repo_name% --private --source=. --remote=origin --push
+    gh repo create %repo_name% --private --source=. --remote=origin
+    git branch -M main
+    git push -u origin main
 )
 
 echo.
