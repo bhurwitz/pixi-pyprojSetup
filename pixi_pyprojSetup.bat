@@ -151,7 +151,7 @@ REM === Initialize Git ===
 git init
 git add .
 git commit -m "Initial project setup"
-git tag -a v%version% -m "Release v%version"
+git tag -a v%version% -m "Initial release"
 
 :: Add a few things to the .gitignore
 (
