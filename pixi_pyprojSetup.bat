@@ -159,7 +159,7 @@ call :prepend_boilerplate "%boilerplate%" "%copiedFile%"
 
 
 REM === Runner batch file ===
-set copiedFile=%package%_run.bat
+set copiedFile=run_%package%.bat
 copy "%templateDir%\runPythonScript.bat" %copiedFile%
 powershell -Command ^
   "$boilerplate = ':: Copyright (C) {year}  {author} <{email}> under GNU GPL v3.0 (see LICENSE.txt for details)';" ^
