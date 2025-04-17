@@ -9,9 +9,9 @@
 setlocal EnableDelayedExpansion
 
 REM === ENVIRONMENTAL VARS
-set templateDir=C:\Users\bchur\Desktop\Projects\_templates
-::set boilerplate=%templateDir%\GNU_GPL_v3_boilerplate.txt
 set defaultDir=C:\Users\bchur\Desktop\Projects
+set templateDir="%~dp0_templates"
+echo Templates will be found at: %templateDir%
 
 cd /d "%defaultDir%"
 echo The project directory will be created in "%CD%".
@@ -96,6 +96,7 @@ copy %boilerplate% README.md
 
 REM === Insert readme and license into pyproject.toml ===
 set TOML_FILE=pyproject.toml
+
 powershell -Command ^
   "$file = '%TOML_FILE%';" ^
   "$lines = Get-Content $file;" ^
@@ -112,17 +113,28 @@ powershell -Command ^
   "}; if (-not $inserted) { Write-Host 'Warning: version line not found' };" ^
   "$newlines | Set-Content $file"
   
-:: Append setuptools and pytest config if not already present
-findstr "[tool.setuptools]" "%TOML_FILE%" >nul || (
-    echo.>> "%TOML_FILE%"
+:: Check if the [tool.setuptools] section exists, and append if not
+findstr /C:"[tool.setuptools]" "%TOML_FILE%" >nul
+:: Check if the [tool.setuptools] section exists, and append if not
+findstr /C:"[tool.setuptools]" "%TOML_FILE%" >nul
+if errorlevel 1 (
+    :: Add an empty line before the section
+    echo.>> "%TOML_FILE%" 
     echo [tool.setuptools]>> "%TOML_FILE%"
     echo package-dir = {"" = "src"}>> "%TOML_FILE%"
+) else (
+    echo [tool.setuptools] section already exists.
 )
 
-findstr "[tool.pytest.ini_options]" "%TOML_FILE%" >nul || (
-    echo.>> "%TOML_FILE%"
+:: Check if the [tool.pytest.ini_options] section exists, and append if not
+findstr /C:"[tool.pytest.ini_options]" "%TOML_FILE%" >nul
+if errorlevel 1 (
+    :: Add an empty line before the section
+    echo.>> "%TOML_FILE%" 
     echo [tool.pytest.ini_options]>> "%TOML_FILE%"
     echo pythonpath = ["src"]>> "%TOML_FILE%"
+) else (
+    echo [tool.pytest.ini_options] section already exists.
 )
   
 
