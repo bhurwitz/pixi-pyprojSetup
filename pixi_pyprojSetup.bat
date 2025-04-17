@@ -95,8 +95,9 @@ copy %boilerplate% README.md
 ) > README.md
 
 REM === Insert readme and license into pyproject.toml ===
+set TOML_FILE=pyproject.toml
 powershell -Command ^
-  "$file = 'pyproject.toml';" ^
+  "$file = '%TOML_FILE%';" ^
   "$lines = Get-Content $file;" ^
   "$newlines = @(); $inserted = $false;" ^
   "foreach ($line in $lines) {" ^
@@ -110,6 +111,20 @@ powershell -Command ^
   "  }" ^
   "}; if (-not $inserted) { Write-Host 'Warning: version line not found' };" ^
   "$newlines | Set-Content $file"
+  
+:: Append setuptools and pytest config if not already present
+findstr "[tool.setuptools]" "%TOML_FILE%" >nul || (
+    echo.>> "%TOML_FILE%"
+    echo [tool.setuptools]>> "%TOML_FILE%"
+    echo package-dir = {"" = "src"}>> "%TOML_FILE%"
+)
+
+findstr "[tool.pytest.ini_options]" "%TOML_FILE%" >nul || (
+    echo.>> "%TOML_FILE%"
+    echo [tool.pytest.ini_options]>> "%TOML_FILE%"
+    echo pythonpath = ["src"]>> "%TOML_FILE%"
+)
+  
 
 REM === Create __init__.py from template ===
 set init_file=src\%package%\__init__.py
