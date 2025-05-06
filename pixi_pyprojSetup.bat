@@ -474,7 +474,18 @@ call :log "INFO" "Arguments parsed successfully."
 
 :: --- 5. Consolidate and Debug (Collect additional user input if missing) ---
 call :debug 1 "Prompt for remaining required parameters..."
-call :CollectMissingInputs
+REM Sort of a hacky way to check for additional prompts that may be needed.
+for /L %%N in (1,1,%PLACEHOLDER_COUNT%) do (
+    if "!PLACEHOLDER_KEY_%%N!"=="author" set AUTHOR_DEFINED=true
+    if "!PLACEHOLDER_KEY_%%N!"=="email" set EMAIL_DEFINED=true
+)
+
+REM Call the subroutine for each required placeholder
+call :EnsurePlaceholderSet CLI_package package "Enter a name for the package." "Should be lower-case or snake-case."
+call :EnsurePlaceholderSet CLI_repo repo_name "Enter a name for the repo." "Should be lower-case or kebab-case."
+call :EnsurePlaceholderSet CLI_desc description "Enter a description." "This should be one (1) sentence that tackles the 'what' and 'why' for this package. This will be displayed in the .toml and the README. [RESTRICTIONS]: No exclamation marks, percent signs, carets, ampersands, pipes, or angle brackets."
+call :EnsurePlaceholderSet AUTHOR_DEFINED author "Enter a name for an author of this package."
+call :EnsurePlaceholderSet EMAIL_DEFINED email "Enter a contact email address." "No validation is done here."
 call :log "INFO" "Completed collecting missing inputs."
 
 REM Export placeholders to environment variables for easier retrieval later.
@@ -1936,121 +1947,23 @@ call :debug 2 "End of 'ParseArgsLoop' - no more arguments."
 goto :eof
 
 
-:: ==========================================================
-:: CollectMissingInputs Subroutine
-:: Prompts for any required inputs not supplied via CLI/config.
-:: Explicitly handled keys (package, repo, description) are prompted for.
-:: Usage: call :CollectMissingInputs
-:: ==========================================================
-:CollectMissingInputs
-call :debug 2 "In CollectMissingInputs"
 
-REM if not defined CLI_package (
-  REM call :debug 2 "CLI argument not provided for package; prompting."
-  REM echo.
-  REM echo Enter a name for the package ^(should be lowercase or snake-case^).
-  REM set /p "package=>>> "
-  REM REM call :AddPlaceholder "package"
-  REM call :AddPlaceholder "package" "!package!"
-  REM set "PACKAGE_DEFINED=true"
-  REM call :debug 3 "package set to '!package!'."
-REM ) else (
-    REM call :debug 2 "Package was already defined, no prompt needed."
-REM )
 
-if not defined CLI_package (
-    call :debug 2 "CLI argument not provided for package; prompting."
-    call :PromptForInput package "Enter a name for the package." "Should be lower-case or snake-case."
-    call :AddPlaceholder "package" "!package!"
-    call :debug 3 "package set to '!package!'." 
+:: ================================================================
+
+REM Define subroutine for checking and setting placeholders
+:EnsurePlaceholderSet
+REM Parameters: %1 = CLI Variable, %2 = Placeholder Key, %3 = Prompt Message, %4 = Additional Instructions (Optional)
+if not defined %1 (
+    call :debug 2 "CLI argument not provided for %2; prompting."
+    call :PromptForInput %2 "%3" "%4"
+    call :AddPlaceholder "%2" "!%2!"
+    call :debug 3 "%2 set to '!%2!'."
 ) else (
-    call :debug 2 "Package was already defined, no prompt needed."
+    call :debug 2 "%2 was already defined, no prompt needed."
 )
+exit /b
 
-
-REM if "!REPO_SAME_AS_PACKAGE!"=="true" (
-  REM call :debug 2 "The '--repo-sameAs-package' flag was passed. Naming the repo '%package%'."
-  REM set "repo_name=%package%"
-  REM REM call :AddPlaceholder "repo_name"
-  REM call :AddPlaceholder "repo_name" "%package%"
-  REM set "REPO_DEFINED=true"
-REM ) else (
-    REM call :debug 2 "REPO_SAME_AS_PACKAGE was NOT defined."
-REM )
-
-REM if not defined CLI_repo (
-  REM call :debug 2 "CLI argument not provided for repo; prompting."
-  REM echo.
-  REM echo Enter a name for the git repo ^(should be lowercase or kebab-case^).
-  REM set /p "repo_name=>>> "
-  REM REM call :AddPlaceholder "repo_name"
-  REM call :AddPlaceholder "repo_name" "!repo_name!"
-  REM set "REPO_DEFINED=true"
-  REM call :debug 3 "Repo name set to '!repo_name!'."
-REM ) else (
-    REM call :debug 2 "Repo was already defined, no prompt needed."
-REM )
-
-if not defined CLI_repo (
-    call :debug 2 "CLI argument not provided for the repo_name; prompting."
-    call :PromptForInput repo_name "Enter a name for the repo." "Should be lower-case or kebab-case."
-    call :AddPlaceholder "repo_name" "!repo_name!"
-    call :debug 3 "repo set to '!repo_name!'." 
-) else (
-    call :debug 2 "Repo_name was already defined, no prompt needed."
-)
-
-REM if not defined CLI_desc (
-  REM call :debug 2 "CLI argument not provided for description; prompting."
-  REM echo.
-  REM echo Enter a short project description.
-  REM echo     - This should be one ^(1^) sentence that tackles the 'what' and 'why' for this package.
-  REM echo     - This will be displayed in the .toml and the README.
-  REM echo     - [RESTRICTIONS]: No exclamation marks, percent signs, carets, ampersands, pipes, or angle brackets. The CLI really hates them.
-  REM echo.
-  REM set /p "description=>>> "
-  REM call :AddPlaceholder "description" "!description!"
-  REM REM call :AddPlaceholder "description"
-  REM call :debug 3 "description set to '!description!'."
-REM ) else (
-    REM call :debug 2 "Description was already defined, no prompt needed."
-REM )
-
-if not defined CLI_desc (
-    call :debug 2 "CLI argument not provided for description; prompting."
-    call :PromptForInput description "Enter a description." "This should be one (1) sentence that tackles the 'what' and 'why' for this package." "This will be displayed in the .toml and the README." "[RESTRICTIONS]: No exclamation marks, percent signs, carets, ampersands, pipes, or angle brackets. The CLI really hates them."
-    call :AddPlaceholder "description" "!description!"
-    call :debug 3 "description set to '!description!'." 
-) else (
-    call :debug 2 "A description was already provided, no prompt needed."
-)
-
-REM Sort of a hacky way to check for additional prompts that may be needed.
-for /L %%N in (1,1,%PLACEHOLDER_COUNT%) do (
-    if "!PLACEHOLDER_KEY_%%N!"=="author" set AUTHOR_DEFINED=true
-    if "!PLACEHOLDER_KEY_%%N!"=="email" set EMAIL_DEFINED=true
-)
-
-if not defined AUTHOR_DEFINED (
-    call :debug 2 "CLI argument not provided for author; prompting."
-    call :PromptForInput author "Enter a name for an author of this package."
-    call :AddPlaceholder "author" "!author!"
-    call :debug 3 "author set to '!author!'." 
-) else (
-    call :debug 2 "Author was already defined, no prompt needed."
-)
-
-if not defined EMAIL_DEFINED (
-    call :debug 2 "CLI argument not provided for email; prompting."
-    call :PromptForInput email "Enter a contact email address." "No validation is done here."
-    call :AddPlaceholder "email" "!email!"
-    call :debug 3 "email set to '!email!'." 
-) else (
-    call :debug 2 "Email was already defined, no prompt needed."
-)
-
-call :debug 2 "End of CollectMissingInputs."
-goto :eof
 
 
 :: ==========================================================
