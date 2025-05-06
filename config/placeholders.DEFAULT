@@ -1,0 +1,28 @@
+###############################################################################
+## 'placeholders.DEFAULT'
+##
+## This file stores the set of DEFAULT placeholders and their values in 'PLACEHOLDER=VALUE' pairs.
+##
+## DO NOT DELETE/ADJUST ANY OF THESE. They are required for the script to run.
+##
+## Usage:
+##  - In any of the template files, you may use the placeholders within curly braces. During processing, the script will replace these with the appropriate value.
+##  - If you wish to update these values, use the same 'PLACEHOLDER=VALUE' format in the 'config\placeholders.user' file within this package directory and set a new value.
+##  - The priority hierarchy is, from highest priority to lowest: command-line argument (e.g. "--package=MyPackage"), in-script prompt (only for 'package', 'repo', 'description', 'author', and 'email' at this time), 'placeholders.user' file, and then 'placeholders.DEFAULT'. It is suggested, but not required, that you set your name and an contact email address to the 'placeholders.user' file. 
+##
+## Example: If the defaults are not overwritten, '{package}' would be replaced with 'DefaultPackage' (no quotes). 
+##
+###############################################################################
+
+package=DefaultPackage
+author=DefaultAuthor
+email=DefaultEmail
+year=NO_YEAR_SET
+date=NO_DATE_SET
+license_spdx=NO_LICENSE_SET
+description=NO_DESCRIPTION_SET
+project_name={package}
+proj_root={parent_dirPath}\{package}
+repo_name={package}
+version=VERSION_SET_BY_TOML
+parent_dirPath=%UserProfile%

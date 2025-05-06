@@ -1,0 +1,38 @@
+##############################################################################
+##
+## THIS IS JUST A SAMPLE FILE!!!
+##
+## PLEASE EITHER COPY THIS OR SAVE IT AS 'placeholders.USER' IN THE CONFIG SUBDIRECTORY OF THE PACKAGE ROOT.
+##
+##############################################################################
+
+
+###############################################################################
+##
+## 'placeholders.USER'
+##
+## This file stores the set of USER-defined placeholders and their values in 'PLACEHOLDER=VALUE' pairs.
+##
+## Usage:
+##  - You are free (and encouraged) to adjust (most of) these as you see fit, including adding or removing any keys you wish or changing values. The 'author' and 'email' ones are used frequently throughout the templates. 
+##  - In any of the template files, you may use the placeholders within curly braces. During processing, the script will replace these with the appropriate value.
+##  - Values may have nested placeholders, up to 10 deep (this is adjustable with the 'max_placeholders_depth' variable in the 'config\pixi_pyprojSetup_config.cmd' file). Values may also use system-defined variables, e.g. '%CD%' or '%UserProfile%'. Any value that may include a space (ESPECIALLY PATHS) should be "double-quoted". 
+##  - The priority hierarchy is, from highest priority to lowest: command-line argument (e.g. "--package=MyPackage"), in-script prompt (only for 'package', 'repo', and 'description', at this time), 'placeholders.user' file, and then 'placeholders.DEFAULT'. It is suggested, but not required, that you set your name and an contact email address to the 'placeholders.user' file. 
+##
+## Example: If the defaults are not overwritten, '{package}' would be replaced with 'DefaultPackage' (no quotes). 
+##
+###############################################################################
+
+
+# Adjust these as desired (but they are common within the templates, so probably don't delete them.)
+################# 
+author=CHANGE_THIS_IN_PLACEHOLDERS.USER
+email=CHANGE_THIS_IN_PLACEHOLDERS.USER
+#################
+
+
+
+# DO NOT DELETE THIS ONE (but feel free to change it to where you'd like project directories to be stored)
+################# 
+parent_dirPath=CHANGE_THIS_IN_PLACEHOLDERS.USER
+#################

@@ -1,9 +1,19 @@
+# Python 
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg
 
 # OS clutter:
 .DS_Store
 Thumbs.db
 .venv/
+*.env
+data/
+.user
+
+# pixi environments
+.pixi
+*.egg-info
+

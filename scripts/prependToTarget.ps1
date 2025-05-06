@@ -1,0 +1,66 @@
+[CmdletBinding()]
+param(
+    # Target file to be updated.
+    [Parameter(Mandatory = $true, Position = 0)]
+    [string]$TargetFile,
+    
+    # Additional items to prepend; each item may be a file or literal text.
+    [Parameter(Mandatory = $true, Position = 1, ValueFromRemainingArguments = $true)]
+    [string[]]$PrependItems,
+    
+    [int]$DEBUG_LEVEL
+)
+
+Import-Module Logging
+
+if ($DEBUG_LEVEL -gt 0) {
+    Set-DebugLevel $DEBUG_LEVEL
+    Log-Status "Debugging enabled at level $DEBUG_LEVEL in 'prependToTarget.ps1'."
+}
+
+# Read the original target file content (or assume empty if it doesn't exist)
+if (Test-Path $TargetFile) {
+    $originalContent = Get-Content -Path $TargetFile -Raw
+    if ($originalContent) {
+        $printLen = [Math]::Min(300, $originalContent.Length)
+        Log-Debug3 "First $printLen chars of the target file:"
+        Log-Debug3 ($originalContent.Substring(0, $printLen))
+    }
+    else {
+        Log-Debug3 "Target file exists but is empty."
+    }
+} else {
+    $originalContent = ""
+    Log-Debug3 "Target file doesn't exist yet, so it's empty."
+}
+
+# Initialize a variable to hold all prepended content
+$prependContent = ""
+
+# Loop over each additional parameter in the order provided.
+foreach ($item in $PrependItems) {
+    if (Test-Path $item) {
+        # If the item is a file, read its content
+        $content = Get-Content -Path $item -Raw
+        Log-Debug3 "Value '$item' is interpreted as a file. Adding its contents."
+    }
+    else {
+        # If not, treat it as literal text.
+        $content = $item
+        Log-Debug3 "Value '$item' is interpreted as literal text."
+    }
+    # Append the content along with a newline separator.
+    $prependContent += $content + "`n"
+}
+
+# Optionally add an extra newline between the prepended block and the original content.
+$combined = $prependContent + "`n" + $originalContent
+
+# Write the combined content back to the target file.
+Set-Content -Path $TargetFile -Value $combined
+
+Log-Debug3 "First 300 chars of the target file after prepending:"
+Log-Debug3 ($combined.Substring(0, [Math]::Min(300, $combined.Length)))
+
+# (Optional) Write an informational message.
+Log-Debug2 "Prepending complete. Updated '$TargetFile'."

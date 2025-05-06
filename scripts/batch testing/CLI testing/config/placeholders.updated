@@ -1,0 +1,11 @@
+author=User O. Verride
+email=useroverride@example.com
+parent_dirPath=C:\Default\ParentDir
+package=
+repo_name=testrepo
+description=testrepo
+year=2001
+license-spdx=GNU GLP v3.0
+version=5.6.7
+testpack=
+2=

@@ -1,0 +1,22 @@
+/*
+This is an example configuration file for the 'toml_insert.ps1' script.
+Note that inline comments, prefaced with '//', and block comments, surrounded by '/*' and '*/', are allowed within JSON structure.
+*/
+
+{
+    // The file to insert into
+    "File": "test_toml_file.toml",
+    
+    // The strings to be inserted. These need to be defined as strings specifically, and need to be properly escaped for PowerShell scripts.
+    "Insertions": {
+        "readme": "README.md", 
+        "license-files": "[\"LICENSE.txt\"]", 
+        "authors": "[{name = \"Name\", email = \"Name@example.com\"}]",
+    },
+    
+    // The string that identifies the line to insert after.
+    "Anchor": "version =",
+    
+    // Adds a ton of extra printed information. Anything other than '0' or 'false' (any capitalization) will be defined as true.
+    "Debug": true
+}

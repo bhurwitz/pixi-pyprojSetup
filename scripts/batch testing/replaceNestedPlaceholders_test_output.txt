@@ -1,0 +1,10 @@
+Project Details:
+Author: Ben Hurwitz
+Date: 2025-05-02
+Description: This is a test description for the dummy package {<"'testpack'">}?
+Email: bchurwitz+testpack@gmail.com+2025-05-02
+License: GPL-3.0-only
+Project Name: DefaultProject
+Version: 0.1.0
+Nested test result:           This is the first level from the top level: This is the second level from the first level: This is the third level from the second level: This is the fourth level from the third level: level-4
+Nested test result should be: This is the first level from the top level: This is the second level from the first level: This is the third level from the second level: This is the fourth level from the third level: level-4
