@@ -9,9 +9,11 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+
 set MODE=VERIFY
 
 set "TAB=    "
+set "TTAB=%TAB%%TAB%"
 for /f "usebackq delims=" %%A in (
   `powershell -NoProfile -Command "$Host.UI.RawUI.WindowSize.Width"`
 ) do set "COLS=%%A"
@@ -70,23 +72,23 @@ if defined DEBUG_LEVEL (
 )
 
 REM The DEBUG_LEVEL can be overwritten by passing it through the CLI, e.g. "--debug=2", but it (like any CLI parameter for this script) must be quoted in its entirety, e.g. "debug=2" not just debug=2.
-call :debug 1 "Looking for a 'debug' CLI parameter..."
+call :log "debug1" "Looking for a 'debug' CLI parameter..."
 for %%A in (%*) do (
     if not defined DEBUG_SET (
         set "curr=%%A"
         REM call :log "INFO" "I see '!curr!'."
         REM Remove the quotes
         set "arg=%%~A"
-        call :debug 2 "I see '!arg!' (quotes removed)."
+        call :log "debug2" "I see '!arg!' (quotes removed)."
         REM Remove the leading double-dashes, if passed.
         if "!arg:~0,2!"=="--" set "arg=!arg:~2!"
-        call :debug 2 "And now it's '!arg!'."
+        call :log "debug2" "And now it's '!arg!'."
         REM Split the argument at the first '='
         for /F "tokens=1,2 delims==" %%B in ("!arg!") do (
-            call :debug 2 "Now it's split into '%%B' and '%%C'."
+            call :log "debug2" "Now it's split into '%%B' and '%%C'."
             REM Identify the debug flag and set it. 
             if /I "%%B"=="debug" (
-                call :debug 2 "There it is!"
+                call :log "debug2" "There it is!"
                 if defined DEBUG_LEVEL (
                     set prevDebug=!DEBUG_LEVEL!
                     set "DEBUG_LEVEL=%%C"
@@ -106,25 +108,13 @@ if not defined DEBUG_LEVEL set DEBUG_LEVEL=0
 if %DEBUG_LEVEL% LSS 1 call :log "STATUS" "Debugging was NOT ENABLED."
 
 
-REM :: Check if /debug was passed
-REM if /I "%~1"=="/debug" (
-    REM set DEBUG=true
-    REM call :debug "DEBUGGING ENABLED"
-    REM shift
-REM )
-
-
-REM :: Process CLI first so it overrides any existing environment variable
-REM call :ParseArguments %*
-
-
 set "PWSH_PATH=C:\Program Files\PowerShell\7\pwsh.exe"
 
 REM Check if PowerShell 7 exists.
 if exist "%PWSH_PATH%" (
-    call :debug "Running with PowerShell 7"
+    call :log "debug1" "Running with PowerShell 7"
 ) else (
-    call :debug "Powershell 7 does not exist. Running with PowerShell 5.1 ^(or whatever is installed^)."
+    call :log "debug1" "Powershell 7 does not exist. Running with PowerShell 5.1 ^(or whatever is installed^)."
     set "PWSH_PATH=C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 )
 
@@ -146,16 +136,25 @@ echo.
 :: --- 1. Load General Configuration Defaults ---
 REM THESE ARE IMMUTABLE AND SHOULD NOT BE CHANGED.
 REM Note that we intentionally import these twice to avoid a situation in which a variable is loaded before it's required whatever-the-opposite-of-dependents-is. For example, if the file has VAR_B above VAR_A, but VAR_B depends on VAR_A (e.g. VAR_B=%VAR_A%), VAR_B won't be properly loaded (it will be empty in this case), but if we re-load the file, VAR_A will be defined when VAR_B is re-defined. 
-call :debug 1 "Loading the config file next."
+call :log "debug1" "Loading the config file next."
 call "%config_dirPath%\pixi_pyprojSetup_config.cmd"
+if errorlevel 1 (
+    call :log "ERROR" "Something went wrong with loading the general configuration defaults." "Make sure that the config file exists at '\config\pixi_pyprojSetup_config.cmd"
+    call :SafeExit "The script can't continue without these variables."
+    if "ABORT_SCRIPT"=="1" exit /b 1
+)
 call "%config_dirPath%\pixi_pyprojSetup_config.cmd"
+if errorlevel 1 (
+    call :log "ERROR" "Something went wrong with re-loading the general configuration defaults to fill in some paths." "Make sure that the config file exists at '\config\pixi_pyprojSetup_config.cmd"
+    call :SafeExit "The script can't continue without these variables."
+    if "ABORT_SCRIPT"=="1" exit /b 1
+)
 call :log "INFO" "Config file loaded."
 
-REM Add the current path to the PSModulePath so that PS can find modules from within it's scripts. 
+REM Add the scripts directory path to the PSModulePath so that PS can find modules from within it's scripts. 
 set "PSModulePath=%PSModulePath%;%CFG_scripts_dirPath%"
 REM "%PWSH_PATH%" -NoProfile -Command "echo $env:PSModulePath"
 REM "%PWSH_PATH%" -NoProfile -Command "Get-Module -ListAvailable"
-pause
 
 REM Now we'll set the placeholders and null some definitions.
 set PLACEHOLDER_COUNT=0
@@ -168,6 +167,19 @@ set "LICENSE_DEFINED="
 
 :: --- 2. Load Default Placeholder Values ---
 call :LoadPlaceholders "%config_dirPath%\placeholders.DEFAULT"
+if errorlevel 1 (
+    call :log "ERROR" "Something went wrong with loading the placeholder defaults." "Make sure that the config file exists at '\config\placeholders.DEFAULT"
+    choice /C:CQ /N /M "Would you like to continue without these values (any placeholders not in the user file will fail to be replace) [C] or quit [Q]?"
+    if errorlevel 2 (
+        call :SafeExit
+        if "ABORT_SCRIPT"=="1": exit /b 1
+    ) else (
+        call :log "INFO" "%TAB%Continuing without loading the default placeholders."
+    )
+) else (
+    call :log "INFO" "Default placeholders loaded."
+)
+
 
 :: --- 2.1 Assigning additional parameter defaults dynamically ---
 for /f %%I in ('powershell -NoProfile -Command "(Get-Date).Year"') do set PH_year=%%I
@@ -175,27 +187,51 @@ call :AddPlaceholder "year" "%PH_year%"
 for /f %%A in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd"') do set "PH_date=%%A"
 call :AddPlaceholder "date" "%PH_date%"
 
-call :log "INFO" "Default placeholders loaded."
+
 
 :: --- 3. Override with User Placeholder Config ---
-call :debug 1 "Reading from '%config_dirPath%\placeholders.USER'."
+call :log "debug1" "Reading from '%config_dirPath%\placeholders.USER'."
 call :LoadPlaceholders "%config_dirPath%\placeholders.USER"
-call :log "INFO" "User's placeholder file loaded."
+if errorlevel 1 (
+    call :log "WARNING" "User's 'placeholders' file failed to load!"
+    choice /C:CQ /N /M "Would you like to continue without these [C] or quit [Q]?"
+    if ERRORLEVEL 2 call :SafeExit
+    if "ABORT_SCRIPT"=="1" exit /b 1
+    call :log "INFO" "%TAB%Continuing without the user's placeholders."
+) else (
+    call :log "INFO" "User's placeholder file loaded."
+)
 
 
 :: --- 4. Process CLI Parameters (highest priority) ---
-call :debug 1 "Parsing arguments..."
+call :log "debug1" "Parsing arguments..."
 call :ParseArguments %*
+if errorlevel 1 (
+    call :log "WARNING" "CLI parameter parsing failed!" "The critical parameters can be set manually later in the script."
+    choice /C:CQ /N /M "Would you like to continue without these [C] or quit [Q]?"
+    if ERRORLEVEL 2 call :SafeExit
+    if "ABORT_SCRIPT"=="1" exit /b 1
+    call :log "INFO" "%TAB%Continuing without the CLI parameters."
+)
 call :log "INFO" "Arguments parsed successfully."
 
 :: --- 5. Consolidate and Debug (Collect additional user input if missing) ---
-call :debug 1 "Prompt for remaining required parameters..."
+call :log "debug1" "Prompt for remaining required parameters..."
 call :CollectMissingInputs
-call :log "INFO" "Completed collecting missing inputs."
+set "ERR=%ERRORLEVEL%"
+if "%ERR%"=="0" (
+    call :log "INFO" "No missing inputs."
+) else (
+    if "%ERR%"=="1" (
+        call :log "INFO" Completed collecting missing inputs."
+    ) else (
+        call :log "WARNING" "Something is odd - 'MISSING_INPUTS' in 'CollectMissingInputs' was neither true nor false. Continuing."
+    )
+)
 
 REM Export placeholders to environment variables for easier retrieval later.
 call :ExportPlaceholders
-call :debug 2 "Placeholders written to environment, including (but not limited to):" "Package = %PH_package%" "Author = %PH_author%" "Version = %PH_version%"
+call :log "debug2" "Placeholders written to environment, including (but not limited to):" "Package = %PH_package%" "Author = %PH_author%" "Version = %PH_version%"
 
 
 ::=============================================================================
@@ -204,10 +240,10 @@ call :debug 2 "Placeholders written to environment, including (but not limited t
 REM === Select a license ===
 :SelectLicense
 
-call :debug "license_spdx = %PH_license_spdx%"
+call :log "debug1" "license_spdx = %PH_license_spdx%"
 
 if defined LICENSE_DEFINED (
-  call :debug "License is defined, supposedly."
+  call :log "debug1" "License is defined, supposedly."
   if not exist "%CFG_license_dirPath%\license_%PH_license_spdx%.txt" (
     call :log "WARNING" "CLI-passed license SPDX code '%PH_license_spdx%' does not have a license file in the license templates directory, located at '%CFG_license_dirPath%'."
     choice M/ "Please select an existing license from the following list [Y], or quit the script and try again [N]."
@@ -218,7 +254,7 @@ if defined LICENSE_DEFINED (
     echo.
     set LICENSE_DEFINED=
   )
-) else (call :debug "License has not been defined beyond the default.")
+) else (call :log "debug1" "License has not been defined beyond the default.")
 
 
 if defined LICENSE_DEFINED goto skipLicensePrompting
@@ -328,11 +364,13 @@ if exist "!PH_parent_dirPath!\!PH_package!" (
     echo     3. Overwrite the package ^(WARNING -- The old package directory will be entirely deleted.^)
     echo     4. Quit the script entirely.
     echo.
-    set /p "selection=>>> "
-    if "%selection%"=="1" goto changePackage
-    if "%selection%"=="2" goto changeParent
-    if "%selection%"=="3" goto delPackage
-    if "%selection%"=="4" goto SafeExit
+    choice /C1234 /N /M ">>>"
+    set "selection=!ERRORLEVEL!"
+    if "!selection!"=="1" goto changePackage
+    if "!selection!"=="2" goto changeParent
+    if "!selection!"=="3" goto delPackage
+    if "!selection!"=="3" goto delPackage
+    if "!selection!"=="4" goto SafeExit
     if "ABORT_SCRIPT"=="1" exit /b
 ) else (
     goto assignParentDir
@@ -342,7 +380,7 @@ if exist "!PH_parent_dirPath!\!PH_package!" (
 echo.
 call :PromptForInput package "Enter a new name for the package." "(Should be lower-case or snake-case.)"
 call :AddPlaceholder "package" "!package!"
-call :debug 1 "Package re-set to '!package!'." 
+call :log "debug1" "Package re-set to '!package!'." 
 goto Does_PackageDir_Exist
 
 
@@ -392,7 +430,8 @@ if errorlevel 2 (
 :InstantiatePixiDirectory
 :: Create and enter project directory
 set "PH_proj_root=%PH_parent_dirPath%\%PH_package%" 
-call :debug 1 "Creating src-layout project directory in '%PH_proj_root%'."
+echo.
+call :log "debug1" "Creating src-layout project directory in '%PH_proj_root%'."
 pixi init "%PH_proj_root%" --format pyproject 
 if errorlevel 1 (
   call :log "ERROR" "FAILED TO GENERATE PIXI DIR AT '%PH_proj_root%'. Oops." "Exiting"
@@ -401,7 +440,7 @@ if errorlevel 1 (
 )
 call :log "INFO" "Project directory created successfully at '%PH_proj_root%'."
 cd %PH_proj_root%
-call :debug "Current working directory set to '%PH_proj_root%'."
+call :log "debug1" "Current working directory set to '%PH_proj_root%'."
 set TOML_FILE=%PH_proj_root%\pyproject.toml
 
 
@@ -419,7 +458,9 @@ call :AddPlaceholder "version" "%PH_version%"
 
 :GeneratePlaceholdersFile
 
-call :debug "Generating placeholders.config project file..."
+echo.
+
+call :log "debug1" "Generating placeholders.config project file..."
 
 if not exist "%PH_proj_root%\config" mkdir "%PH_proj_root%\config"
 
@@ -432,11 +473,22 @@ set "placeholders=%PH_proj_root%\config\placeholders.config"
         echo !k!=!v!
     )
 ) > "%placeholders%"
-
+if errorlevel 1 (
+    call :log "ERROR" "Failed to write placeholders file."
+    choice /C:CQ /N /M "Would you like to continue without replacing placeholders [C] or quit [Q]?"
+    if ERRORLEVEL 2 (
+        call :SafeExit
+        if "ABORT_SCRIPT"=="1" exit /b 1
+    )
+) else (
+    call :log "INFO" "Placeholders file written."
+)
 
 
 :InitGit
 :: Initialize Git ===
+echo.
+call :log "INFO" Initializing git.
 git init
 echo.
 
@@ -446,10 +498,11 @@ echo.
 :: ——————————————
 :: 3) Copy the LICENSE file
 if defined LICENSE_DEFINED (
-  call :debug "Copying license '%PH_license_spdx%' into project."
+  call :log "debug1" "Copying license '%PH_license_spdx%' into project."
   call :copy_fromTemplate "%CFG_license_dirPath%\license_%PH_license_spdx%.txt" "%PH_proj_root%\LICENSE.txt" "%PWSH_PATH%" "%CFG_script_prepend%" "" "%CFG_script_replacePlaceholders%" "%placeholders%" "%CFG_max_placeholder_depth%" %DEBUG_LEVEL%
+  call :log "INFO" "%license_spdx% license file processed successfully."
 ) else (
-  call :debug "No license defined, project will not be explicitly licensed."
+  call :log "debug1" "No license defined, project will not be explicitly licensed."
 )
 
 :: --------------
@@ -458,16 +511,16 @@ if defined LICENSE_DEFINED (
 :: 4) Ensure a boilerplate exists in _templates
 set "boilerplate_name=%CFG_boilerplate_name:{license_spdx}=!PH_license_spdx!%"
 set "boilerplate_txt_template=%CFG_boilerplatesDir%\%boilerplate_name%.txt.%CFG_templateExt%"
-call :debug "In boilerplate setting section" "boilerplate.txt template = '%boilerplate_txt_template%'"
+call :log "debug1" "In boilerplate setting section" "boilerplate.txt template = '%boilerplate_txt_template%'"
 
 if not exist "%CFG_boilerplatesDir%" (
   echo '%CFG_boilerplatesDir%' does not exist. Creating.
   mkdir "%CFG_boilerplatesDir%"
-) else (call :debug "boilerplatesDir exists.")
+) else (call :log "debug1" "boilerplatesDir exists.")
 
 
 if not exist "%boilerplate_txt_template%" (
-  call :debug "boilerplate DOES NOT exist. Creating..."
+  call :log "debug1" "boilerplate DOES NOT exist. Creating..."
   if not defined LICENSE_DEFINED (
     echo -- [ERROR] --
     echo No license was defined!
@@ -477,14 +530,14 @@ if not exist "%boilerplate_txt_template%" (
   ) else (
     echo This file within package ^<%PH_package%^> is copyrighted by %PH_author% ^<%PH_email%^> as of %PH_year% under the %PH_license_spdx% license. > "%boilerplate_txt_template%"
   )
-  call :debug "Created boilerplate. Copying..."
+  call :log "debug1" "Created boilerplate. Copying..."
 ) else (
-  call :debug "Boilerplate template exists. Copying..."
+  call :log "debug1" "Boilerplate template exists. Copying..."
 )
 
 call :copy_fromTemplate "%boilerplate_txt_template%" "%PH_proj_root%\config\%boilerplate_name%.txt" "%PWSH_PATH%" "%CFG_script_prepend%" "" "%CFG_script_replacePlaceholders%" "%placeholders%" "%CFG_max_placeholder_depth%" %DEBUG_LEVEL%
 
-call :debug "Boilerplate file copied."
+call :log "INFO" "%license_spdx% boilerplate file processed successfully."
 
 REM pause
 
@@ -494,26 +547,21 @@ REM pause
 
 :TemplateProcessingLoop
 
-echo.
-echo --------------------------------------------------------------------------
-echo --------------------------------------------------------------------------
-echo.
-echo        BEGIN PROCESSING FILES
-echo.
-echo --------------------------------------------------------------------------
-echo --------------------------------------------------------------------------
-echo.
+call :SectionHeader "TEMPLATE PROCESSING"
 
+call :log "INFO" "Processing templates."
 
 REM Recursively loop through all files under the parent directory.
 for /R "%CFG_templates_dirPath%" %%F in (*) do (
 
     set "filepath=%%F"
+    set "filename=%%~nxF"
     set "skipFile="
+    set "skipFolder"
     set "noBP="
     
     set "relPath=!filepath:%CFG_templates_dirPath%\=!"
-    call :debug "Processing 'TEMPLATES\!relPath!'..."
+    call :log "INFO" "%TAB%Processing '!relPath!'..."
 
     REM Check each excluded folder.
     for %%D in (%CFG_excludeFolders%) do (
@@ -521,17 +569,29 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
         REM This call uses string substitution to remove "\FolderName\" from the file path.
         call set "test=%%filepath:\%%~D\=%%%"
         if not "!test!"=="!filepath!" (
-           set "skipFile=yes"
+           set "skipFolder=yes"
+        )
+    )
+
+    REM Check each excluded file.
+    for %%E in (%CFG_excludeFiles%) do (
+        REM %%~E removes surrounding quotes.
+        if /I "%%~E"=="!filename!" (
+            set "skipFile=yes"
         )
     )
 
     if defined skipFile (
-        call :debug "-- Skipping file because it is in one of the excluded folders."
-    ) else (
+        call :log "INFO" "%TTAB%Skipping - this filename is on the exclusions list."
+    )
+    if defined skipFolder (
+        call :log "INFO" "%TTAB%Skipping - this file resides in an excluded folder."
+    )
+    if not defined skipFile if not defined skipFolder (
     
         REM First we do some fancy stripping to get the relative path
         REM set "relPath=!filepath:%CFG_templates_dirPath%\=!"
-        REM call :debug "Relative path: '!relPath!'"
+        REM call :log "debug1" "Relative path: '!relPath!'"
         
         REM If the path begins with 'src\', we rebuild the 'relPath' to include the package name so it copies into '<package>\src\<package>'.
         if /I "!relPath:~0,4!"=="src\" (
@@ -549,7 +609,7 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
         REM set "destFile=!destFile:.TEMPLATE=!" & REM this does the stripping
         set "destFile=!destFile:.%CFG_templateExt%=!" & REM this does the stripping
         set "relDest=!destFile:%PH_proj_root%\=!"
-        call :debug "Destination filepath: '!destFile!'"
+        call :log "debug1" "Destination filepath: '!destFile!'"
         
         REM Create the destination directory tree if needed.
         REM (Use for /F to extract the directory, then mkdir)
@@ -564,10 +624,10 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
                 set "FilenameWithExt=%%~nxF"
                 REM set "FilenameWithoutTemplateExt=!FilenameWithExt:.TEMPLATE=!"
                 set "FilenameWithoutTemplateExt=!FilenameWithExt:.%CFG_templateExt%=!"
-                call :debug "NoBP: does ignore-file '%%I' match current file '!FilenameWithoutTemplateExt!'?"
+                call :log "debug1" "NoBP: does ignore-file '%%I' match current file '!FilenameWithoutTemplateExt!'?"
                 REM Compare file names (case-insensitive).
                 if /I "%%I"=="!FilenameWithoutTemplateExt!" (
-                    call :debug "File is on the 'No Boilerplates' list, so no boilerplate will be appended.
+                    call :log "debug1" "File is on the 'No Boilerplates' list, so no boilerplate will be appended.
                     set "noBP=true"
                 )
             )
@@ -576,22 +636,22 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
         REM If the file was NOT on the 'No Boilerplate' list, we need to determine the correct boilerplate file to use.
         if not defined noBP (
 
-            call :debug "Boilerplate identification..." "Boilerplate_name: %boilerplate_name%" "BoilerplatesDir: %CFG_boilerplatesDir%" "boilerplate_txt_template: %boilerplate_txt_template%"
+            call :log "debug1" "Boilerplate identification..." "Boilerplate_name: %boilerplate_name%" "BoilerplatesDir: %CFG_boilerplatesDir%" "boilerplate_txt_template: %boilerplate_txt_template%"
 
             REM 3.1: Identify the target file's filetype via its extension.
             REM set "strippedName=!filepath:.TEMPLATE=!"
             set "strippedName=!filepath:.%CFG_templateExt%=!"
-            call :debug "Stripped name: '!strippedName!'"
+            call :log "debug1" "Stripped name: '!strippedName!'"
             for %%A in ("!strippedName!") do set "ext=%%~xA"
-            call :debug "Extracted extension: '!ext!'"
+            call :log "debug1" "Extracted extension: '!ext!'"
             
             REM 3.2 Check the boilerplates directory for an appropriately commented boilerplate file.
             if exist %CFG_boilerplatesDir%\%boilerplate_name%!ext!.%CFG_templateExt% (
               set "boilerplate=%CFG_boilerplatesDir%\%boilerplate_name%!ext!.%CFG_templateExt%"
-              call :debug "Boilerplate for '!ext!' exists."
+              call :log "debug1" "Boilerplate for '!ext!' exists."
             ) else (
                 REM 3.3 Since the correctly-commented boilerplate file doesn't exist (at least, within the boilerplates directory), we'll have to make it.
-                call :debug "Boilerplate file for '!ext!' does not exist. Creating." "Should be '%CFG_boilerplatesDir%\%boilerplate_name%!ext!.%CFG_templateExt%'"
+                call :log "debug1" "Boilerplate file for '!ext!' does not exist. Creating." "Should be '%CFG_boilerplatesDir%\%boilerplate_name%!ext!.%CFG_templateExt%'"
                 
                 REM 3.3.1 Define the path for the new boilerplate file
                 set "boilerplate=%CFG_boilerplatesDir%\%boilerplate_name%!ext!.%CFG_templateExt%
@@ -599,7 +659,7 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
                 REM 3.3.2 Append the appropriate comment character(s) by using the '.txt' boilerplate template (which was created earlier so it exists).
                 "%PWSH_PATH%" -NoProfile -File "%CFG_script_BPcommenting%" -Boilerplate "%boilerplate_txt_template%" -Extension "!ext!" -OutputFile "!boilerplate!" -Debug_Level %DEBUG_LEVEL%
                 
-                call :debug "Boilerplate file: '!boilerplate!'"
+                call :log "debug1" "Boilerplate file: '!boilerplate!'"
                 echo.
                 choice /M "Would you like to save this new boilerplate file for future use?"
                 if errorlevel 2 set "DEL_BP=true"
@@ -612,23 +672,15 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
         )
         
         REM 4. Then process the template
-        echo Processing 'TEMPLATES\!relPath!' into '%PH_package%\!relDest!'
+        call :debug 1 "%TTAB%Processing..."
         call :copy_fromTemplate "!filepath!" "!destFile!" "%PWSH_PATH%" "%CFG_script_prepend%" "!boilerplate!" "%CFG_script_replacePlaceholders%" "%placeholders%" "%CFG_max_placeholder_depth%" %DEBUG_LEVEL%
         
         if defined DEL_BP (
           del "!boilerplate!"
           set "DEL_BP="
         )
-        
-        echo.
-        echo --- Successfully processed
-        echo.
-        echo Press enter to move to the next file.
-        echo.
-        REM pause
-        echo.
-        echo ----------------------------------------------
-        echo.
+
+        call :log "INFO" "%TTAB%Successfully processed to '%PH_package%\!relDest!'."
     )
 )
 
@@ -639,7 +691,12 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
 :RenameRunFile
 REM === Rename the copied batch script file ===
 rename "runPythonScript.bat" "run_%PH_package%.bat"
-call :debug "Run.bat renamed to 'run_%PH_package%.bat'"
+if errorlevel 1 (
+    call :log "WARNING" "FAILED TO RENAME 'runPythonScript.bat'."
+) else (
+    call :log "debug1" "runPythonScript.bat renamed to 'run_%PH_package%.bat'"
+)
+
 
 ::=============================================================================
 ::=============================================================================
@@ -661,8 +718,9 @@ if errorlevel 1 (
     REM No extra blank line needed; one exists at the end of the file already.
     echo [tool.setuptools]>> "%TOML_FILE%"
     echo package-dir = {"" = "src"}>> "%TOML_FILE%"
+    call :log "info" "'tools.setuptools' section added to 'pyproject.toml'."
 ) else (
-    echo [tool.setuptools] section already exists.
+    call :log "debug1" "'tool.setuptools' section already exists in 'pyproject.toml'.
 )
 
 
@@ -671,13 +729,14 @@ if errorlevel 1 (
 
 :: Make the first commit
 git add .
-git commit -m "Initial project setup"
+git add --renormalize .
+git commit -m "Initial project setup with normalized line-endings via gitattributes."
 git tag -a v%PH_version% -m "v%PH_version%: Initial release"
 
 REM === Push to the repo ===
 echo.
 choice /M "Would you like to push to GitHub?"
-REM call :debug 1 "ERRORLEVEL is %errorlevel%"
+REM call :log "debug1" "ERRORLEVEL is %errorlevel%"
 IF ERRORLEVEL 2 GOTO skipGitHub
 
 call :log "INFO" "Pushing to github"
@@ -725,13 +784,13 @@ set "SOURCE=%~1"
 set "DEST=%~2"
 set "TAB=   "
 
-call :debug "In 'copy_withMsg'" "Source: '%SOURCE%'" "Destination: '%DEST%'"
+call :log "debug2" "In 'copy_withMsg'" "Source: '%SOURCE%'" "Destination: '%DEST%'"
 
 copy "%SOURCE%" "%DEST%" >nul
 if %errorlevel%==0 (
-    echo %TAB%Successfully copied ^<%SOURCE%^> to ^<%DEST%^>.
+    call :debug 2 "%TAB%Successfully copied ^<%SOURCE%^> to ^<%DEST%^>."
 ) else (
-    echo %TAB%FAILED TO COPY ^<%SOURCE%^> to ^<%DEST%^>
+    call :log "ERROR" "%TAB%FAILED TO COPY ^<%SOURCE%^> to ^<%DEST%^>. Continuing."
 )
 goto :eof
 
@@ -772,20 +831,20 @@ call :debug "------------------------------------------------------------------"
 
 
 REM Second, we copy the source file (the template) into the new destination.
-call :debug "Copying..."
+call :log "debug1" "Copying..."
 call :copy_withMsg "%SOURCE%" "%DEST%"
 
 REM :prepending
-call :debug "Prepending..."
+call :log "debug1" "Prepending..."
 if "%BOILERPLATE%"=="" (
-  call :debug "Nothing to prepend - continuing"
+  call :log "debug1" "Nothing to prepend - continuing"
 ) else (
     "%PWSH%" -NoProfile -ExecutionPolicy Bypass -File "%PREPEND_SCRIPT%" "%DEST%" "%BOILERPLATE%" -DEBUG_LEVEL "%_DEBUG_LEVEL%"
 )
 
 
 REM Finally, we call the placeholder-replacement script to replace all the placeholders.
-call :debug "Running replacement script..."
+call :log "debug1" "Running replacement script..."
 "%PWSH%" -NoProfile -File "%REPLACEMENT_SCRIPT%" -InputFile "%DEST%" -OutputFile "%DEST%" -EnvFile "%PLACEHOLDERS%" -MaxIterations "%CFG_max_placeholder_depth%" -DEBUG_LEVEL "%_DEBUG_LEVEL%"
 
 
@@ -824,7 +883,7 @@ exit /b 1
 :: Method for printing debugging statements.
 :: Optionally takes a numeric level as the first parameter.
 :: If the first parameter does not start with a digit then level defaults to 1.
-:: Usage: call :_debug [level] "Message 1" "Message 2" ...
+:: Usage: call :debug [level] "Message 1" "Message 2" ...
 :: ==========================================================
 
 :: MAJOR NOTE!! I originally wanted to write wrappers for this functionality (e.g. 'debug1') and make this into an internal helper function. The issue is that passing an arbitrary number of arguments from 'debug1' to 'debug' would have been fragile. The "obvious" way to do is to call, from within 'debug1', 'call :debug 1 %*', where the '%*' would pass all the subsequent arguments. The issue is that this notation doesn't work within certain contexts (e.g. loops or other blocks wih extra parsing) and 'DelayedExpansion' interferes with it. There is way to avoid it - you loop over all the passed arguments to build a single string and pass that - but that kind of defeats the purpose of the wrapper since each of the wrappers would need this nearly-identical code. So instead, it's preferred here to use a single method that's a bit more flexible at the expense of an extra subroutine parameter.
@@ -834,6 +893,8 @@ exit /b 1
 
 :debug
 setlocal EnableDelayedExpansion
+
+REM echo These arguments were passed to 'debug': %*
 
 :: If global debugging is off, exit this gracefully and early.
 if "!DEBUG_LEVEL!"=="0" (
@@ -869,13 +930,13 @@ if !DEBUG_LEVEL! LSS !level! (
 echo.
 :debug_loop
 if "%~1"=="" goto after_debug
-REM call :debug 4 "Next argument: '%~1'"
+REM call :log "debug4" "Next argument: '%~1'"
 echo [DEBUG] %~1 1>&2
 shift
 goto debug_loop
 
 :after_debug
-REM call :debug 4 "End of debugging subroutine - no more arguments."
+REM call :log "debug4" "End of debugging subroutine - no more arguments."
 endlocal
 goto :eof
 
@@ -898,22 +959,122 @@ goto :eof
 :: All this is to say, don't try breaking this up into wrappers. 
 :: ==========================================================
 
+REM :log
+REM call :log "debug4" "Inside the 'log' subroutine."
+
+REM set "severity=%~1"
+REM call :log "debug4" "Severity set to '%~1'."
+REM shift
+REM call set "args=%*"
+
+REM if /I "!severity:~0,5!"=="debug" (
+    REM REM Extract the 6th character (i.e. at index 5)
+    REM set "level=!severity:~5,1!"
+    REM call :debug !level! !args!
+    REM exit /b 0
+REM )
+
+
+REM if /I "%severity%"=="ERROR" (
+  REM call :log "debug4" "This will send messages to stderr."
+REM ) else (
+  REM call :log "debug4" "This is NOT an error (it was '%severity%'), so will print normally."
+REM )
+
+REM REM Print first argument on same line as severity.
+REM REM Subsequent arguments will be on intended unlabeled lines.
+
+REM set "msg=%~1"
+REM if /I "%severity%"=="ERROR" (
+  REM echo.
+  REM echo --[ERROR]-- %msg%1>&2
+REM ) else (
+    REM if "%severity%"=="WARNING" (
+      REM echo.
+      REM echo -[WARNING]- %msg%
+    REM ) else (
+        REM echo [%severity%]: %msg%
+    REM )
+REM )
+REM shift
+
+REM setlocal EnableDelayedExpansion
+
+REM :log_loop
+REM if "%~1"=="" goto log_done
+REM call :log "debug4" "Next argument: '%~1'"
+REM REM set "msg=!msg! %~1"
+REM REM call :log "debug4" "Message is now: '!msg!'"
+REM REM shift
+REM REM goto log_loop
+
+REM set "msg=%~1"
+REM if /I "%severity%"=="ERROR" (
+  REM echo     !msg! 1>&2
+REM ) else (
+  REM echo     !msg!
+REM )
+REM shift
+REM goto log_loop
+
+
+REM :log_done
+REM REM Basic example: errors go to stderr.
+REM call :log "debug4" "End of 'log' subroutine - no more arguements."
+
+REM endlocal
+REM goto :eof
+
+::-------------------------------------------------------------------------
+::-------------------------------------------------------------------------
+
 :log
-call :debug 4 "Inside the 'log' subroutine."
+REM call :log "debug4" "Inside the 'log' subroutine."
+REM echo In 'log'
+set "debugging="
 
 set "severity=%~1"
-call :debug 4 "Severity set to '%~1'."
-if /I "%severity%"=="ERROR" (
-  call :debug 4 "This will send messages to stderr."
-) else (
-  call :debug 4 "This is NOT an error (it was '%severity%'), so will print normally."
-)
+REM echo Severity is '%severity%'.
+REM call :log "debug4" "Severity set to '%~1'."
 shift
+
+if /I "!severity:~0,5!"=="debug" (
+
+    REM echo I think we are debugging.
+
+    REM Extract the 6th character (i.e. at index 5)
+    set "level=!severity:~5,1!"
+    REM echo The level is set to !level!.
+    
+    REM If global debugging is off, exit.
+    if "!DEBUG_LEVEL!"=="0" (
+        REM echo Whoops, debugging is currently disabled.
+        exit /b 1
+    )
+    
+    REM If the level is above the global debug level, exit. 
+    REM (We only print debugging statements at levels BELOW the set debug level.)
+    if "!level!" gtr "!DEBUG_LEVEL!" (
+        REM echo Whoops, the level of this call is higher than the set debug level. 
+        exit /b 1
+    )
+    
+    set "severity=DEBUG"
+    REM echo Severity has been reset to '!severity!'.
+)
+
+if /I "%severity%"=="ERROR" (
+  REM call :log "debug4" "This will send messages to stderr."
+) else (
+  REM call :log "debug4" "This is NOT an error (it was '%severity%'), so will print normally."
+)
+
 
 REM Print first argument on same line as severity.
 REM Subsequent arguments will be on intended unlabeled lines.
 
 set "msg=%~1"
+REM echo First msg: '!msg!'
 if /I "%severity%"=="ERROR" (
   echo.
   echo --[ERROR]-- %msg%1>&2
@@ -927,17 +1088,12 @@ if /I "%severity%"=="ERROR" (
 )
 shift
 
-setlocal EnableDelayedExpansion
-
 :log_loop
 if "%~1"=="" goto log_done
-call :debug 4 "Next argument: '%~1'"
-REM set "msg=!msg! %~1"
-REM call :debug 4 "Message is now: '!msg!'"
-REM shift
-REM goto log_loop
+REM call :log "debug4" "Next argument: '%~1'"
 
 set "msg=%~1"
+REM echo Next message: '!msg!'
 if /I "%severity%"=="ERROR" (
   echo     !msg! 1>&2
 ) else (
@@ -949,10 +1105,55 @@ goto log_loop
 
 :log_done
 REM Basic example: errors go to stderr.
-call :debug 4 "End of 'log' subroutine - no more arguements."
-
-endlocal
+REM call :log "debug4" "End of 'log' subroutine - no more arguements."
+REM echo And that was the end of 'log'. 
 goto :eof
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 :: ==========================================================
@@ -987,26 +1188,26 @@ goto :eof
 set "key=%~1"
 set "value=%~2"
 
-call :debug 2 "In AddPlaceholder with key=%~1 and value=%~2"
-call :debug 2 "How many placeholders do we have so far? %PLACEHOLDER_COUNT%"
+call :log "debug2" "In AddPlaceholder with key=%~1 and value=%~2"
+call :log "debug2" "How many placeholders do we have so far? %PLACEHOLDER_COUNT%"
 
 :: Check if key already exists
-call :debug 3 "Checking for duplicate keys..."
+call :log "debug3" "Checking for duplicate keys..."
 for /L %%N in (1,1,%PLACEHOLDER_COUNT%) do (
-    call :debug 3 "Is '!PLACEHOLDER_KEY_%%N!' equal to '%key%'?"
+    call :log "debug3" "Is '!PLACEHOLDER_KEY_%%N!' equal to '%key%'?"
     if "!PLACEHOLDER_KEY_%%N!"=="%key%" (
-        call :debug 3 "Updating existing placeholder: '!PLACEHOLDER_KEY_%%N!' is now '%value%'."
+        call :log "debug3" "Updating existing placeholder: '!PLACEHOLDER_KEY_%%N!' is now '%value%'."
         set "PLACEHOLDER_VALUE_%%N=%value%"
         goto :eof
     )
 )
 
 :: Key was not found, add a new entry
-call :debug 2 "Key %key% was not found in the placeholders set."
+call :log "debug2" "Key %key% was not found in the placeholders set."
 set /A PLACEHOLDER_COUNT+=1
 set "PLACEHOLDER_KEY_!PLACEHOLDER_COUNT!=%key%"
 set "PLACEHOLDER_VALUE_!PLACEHOLDER_COUNT!=%value%"
-call :debug 3 "Added new placeholder: mapped '!key!' to '!value!'."
+call :log "debug3" "Added new placeholder: mapped '!key!' to '!value!'."
 goto :eof
 
 
@@ -1020,13 +1221,13 @@ goto :eof
 :: Usage: call :ParseArguments %*
 :: ==========================================================
 :ParseArguments
-call :debug 2 "In ParseArguments"
+call :log "debug2" "In ParseArguments"
 :ParseArgsLoop
-call :debug 3 "At the top of the 'ParseArgsLoop'"
+call :log "debug3" "At the top of the 'ParseArgsLoop'"
 if "%~1"=="" goto EndParseArgs
 
 set "arg=%~1"
-call :debug 2 "Arg = !arg!"
+call :log "debug2" "Arg = !arg!"
 
 :: Remove leading '--' if present
 if "!arg:~0,2!"=="--" set "arg=!arg:~2!"
@@ -1035,12 +1236,12 @@ if "!arg:~0,2!"=="--" set "arg=!arg:~2!"
 for /F "tokens=1,* delims==" %%A in ("!arg!") do (
     set "param=%%A"
     set "val=%%B"
-    call :debug 3 "Arg parsed as '!param!' and '!val!'."
+    call :log "debug3" "Arg parsed as '!param!' and '!val!'."
 )
 
 :: Check for known parameters and update variables accordingly.
 if /I "!param!"=="debug" (
-    call :debug 3 "Param identified as 'debug', previously identified and set. Skipping."
+    call :log "debug3" "Param identified as 'debug', previously identified and set. Skipping."
     shift 
     goto ParseArgsLoop
 )
@@ -1049,38 +1250,37 @@ if /I "!param!"=="debug" (
 REM Some potential keys need a bit of special handling.
 if /I "%param%"=="package" (
     set "CLI_package=1"
-    call :debug 3 "CLI_package set"
-    pause
+    call :log "debug3" "CLI_package set"
 )
 if /I "%param%"=="repo_name" (
     set "CLI_repo=1"
-    call :debug 3 "CLI_repo set"
+    call :log "debug3" "CLI_repo set"
 )
 if /I "%param%"=="repo-name" (
     set "param=repo_name"
     set "CLI_repo=1"
-    call :debug 3 "CLI_repo set"
+    call :log "debug3" "CLI_repo set"
 )
 if /I "%param%"=="description" (
     set "CLI_desc=1"
-    call :debug 3 "CLI_desc set"
+    call :log "debug3" "CLI_desc set"
 )
 if /I "%param%"=="author" (
     set "AUTHOR_DEFINED=1"
-    call :debug 3 "author set in CLI"
+    call :log "debug3" "author set in CLI"
 )
 if /I "%param%"=="email" (
     set "EMAIL_DEFINED=1"
-    call :debug 3 "email defined in CLI"
+    call :log "debug3" "email defined in CLI"
 )
 if /I "%param%"=="license_spdx" (
     set "LICENSE_DEFINED=1"
-    call :debug 3 "License defined in CLI"
+    call :log "debug3" "License defined in CLI"
 )
 if /I "%param%"=="license-spdx" (
     set "param=license_spdx"
     set "LICENSE_DEFINED=1"
-    call :debug 3 "License defined in CLI"
+    call :log "debug3" "License defined in CLI"
 )
 if /I "%param%"=="parent-dirPath" set "param=parent_dirPath"
 
@@ -1093,7 +1293,7 @@ call :AddPlaceholder "%param%" "%val%"
 shift
 goto ParseArgsLoop
 :EndParseArgs
-call :debug 2 "End of 'ParseArgsLoop' - no more arguments."
+call :log "debug2" "End of 'ParseArgsLoop' - no more arguments."
 goto :eof
 
 
@@ -1105,35 +1305,40 @@ goto :eof
 :: NOTE: I tried to subroutine this further by standardizing the conditional blocks but that was a rabbit hole of epic proportions due to the double expansion which never seems to work properly in batch. By "double expansion" I mean "pass a variable's name as an argument and then try to pull out the value for that variable". Trying the silly "call set" trick didn't work, nor did "%%%var%%%", so I have no idea how to do this. Anyway, this is all to say DON'T DO IT. Just leave that monster alone. Even thought the way this is done right now is kinda dumb.
 :: ==========================================================
 :CollectMissingInputs
-call :debug 2 "In CollectMissingInputs"
+call :log "debug2" "In CollectMissingInputs"
+
+set "MISSING_INPUTS=false"
 
 if not defined CLI_package (
-    call :debug 2 "CLI argument not provided for package; prompting."
+    call :log "debug2" "CLI argument not provided for package; prompting."
     call :PromptForInput package "Enter a name for the package." "Should be lower-case or snake-case."
     call :AddPlaceholder "package" "!package!"
-    call :debug 3 "package set to '!package!'." 
+    call :log "debug3" "package set to '!package!'." 
+    set "MISSING_INPUTS=true"
 ) else (
-    call :debug 2 "Package was already defined as '!package!', no prompt needed."
+    call :log "debug2" "Package was already defined as '!package!', no prompt needed."
 )
 
 
 if not defined CLI_repo (
-    call :debug 2 "CLI argument not provided for the repo_name; prompting."
+    call :log "debug2" "CLI argument not provided for the repo_name; prompting."
     call :PromptForInput repo_name "Enter a name for the repo." "Should be lower-case or kebab-case."
     call :AddPlaceholder "repo_name" "!repo_name!"
-    call :debug 3 "repo set to '!repo_name!'." 
+    call :log "debug3" "repo set to '!repo_name!'." 
+    set "MISSING_INPUTS=true"
 ) else (
-    call :debug 2 "Repo_name was already defined as '!repo_name!', no prompt needed."
+    call :log "debug2" "Repo_name was already defined as '!repo_name!', no prompt needed."
 )
 
 
 if not defined CLI_desc (
-    call :debug 2 "CLI argument not provided for description; prompting."
+    call :log "debug2" "CLI argument not provided for description; prompting."
     call :PromptForInput description "Enter a description." "This should be one (1) sentence that tackles the 'what' and 'why' for this package." "This will be displayed in the .toml and the README." "[RESTRICTIONS]: No exclamation marks, percent signs, carets, ampersands, pipes, or angle brackets. The CLI really hates them."
     call :AddPlaceholder "description" "!description!"
-    call :debug 3 "description set to '!description!'." 
+    call :log "debug3" "description set to '!description!'." 
+    set "MISSING_INPUTS=true"
 ) else (
-    call :debug 2 "A description was already provided as '!description!', no prompt needed."
+    call :log "debug2" "A description was already provided as '!description!', no prompt needed."
 )
 
 REM Sort of a hacky way to check for additional prompts that may be needed.
@@ -1143,24 +1348,36 @@ for /L %%N in (1,1,%PLACEHOLDER_COUNT%) do (
 )
 
 if not defined AUTHOR_DEFINED (
-    call :debug 2 "CLI argument not provided for author; prompting."
+    call :log "debug2" "CLI argument not provided for author; prompting."
     call :PromptForInput author "Enter a name for an author of this package."
     call :AddPlaceholder "author" "!author!"
-    call :debug 3 "author set to '!author!'." 
+    call :log "debug3" "author set to '!author!'." 
+    set "MISSING_INPUTS=true"
 ) else (
-    call :debug 2 "Author was already defined as '!author!', no prompt needed."
+    call :log "debug2" "Author was already defined as '!author!', no prompt needed."
 )
 
 if not defined EMAIL_DEFINED (
-    call :debug 2 "CLI argument not provided for email; prompting."
+    call :log "debug2" "CLI argument not provided for email; prompting."
     call :PromptForInput email "Enter a contact email address." "No validation is done here."
     call :AddPlaceholder "email" "!email!"
-    call :debug 3 "email set to '!email!'." 
+    call :log "debug3" "email set to '!email!'." 
+    set "MISSING_INPUTS=true"
 ) else (
-    call :debug 2 "Email was already defined as '!email!', no prompt needed."
+    call :log "debug2" "Email was already defined as '!email!', no prompt needed."
 )
 
-call :debug 2 "End of CollectMissingInputs."
+call :log "debug2" "End of CollectMissingInputs."
+
+if "%MISSING_INPUTS%"=="true" (
+    exit /b 1
+) else (
+    if "%MISSING_INPUTS%"=="false" (
+        exit /b 0
+    ) else (
+        exit /b 2
+    )
+)
 goto :eof
 
 
@@ -1186,12 +1403,12 @@ rem ====================================================
 setlocal EnableDelayedExpansion
 
 set "varName=%~1"
-call :debug 3 "VarName = %varName%"
+call :log "debug3" "VarName = %varName%"
 shift
 echo.
 
 if "%~1"=="" (
-    call :debug "Second argument was empty, using default prompt string."
+    call :log "debug1" "Second argument was empty, using default prompt string."
     echo Enter a value for !varName!.
     goto InputPrompt
 )
@@ -1203,11 +1420,11 @@ echo !TAB!!msg!
 set "TAB=    "
 shift
 if "%~1"=="" goto InputPrompt
-call :debug 3 "Third argument was NOT empty, looping."
+call :log "debug3" "Third argument was NOT empty, looping."
 goto InputLoop
 
 :InputPrompt
-call :debug 3 "End of arguments; prompting."
+call :log "debug3" "End of arguments; prompting."
 echo.
 set /p "temp=    >>> "
 echo.
@@ -1219,7 +1436,7 @@ if errorlevel 2 (
     echo Let's try again...
     goto InputPrompt
 ) else (
-    call :debug 3 "Confirmed"
+    call :log "debug3" "Confirmed"
 )
 (
     endlocal
@@ -1252,11 +1469,12 @@ echo.
 <nul set /p "=Press 'Enter' to %~1, or 'Q' to quit."
 set /p dummy=""
 if /I "%dummy%"=="q" call :SafeExit
+if "ABORT_SCRIPT"=="1" exit /b 1
 
 call :linebreak
 
 echo.
-goto :eof
+exit /b 0
 
 
 :linebreak

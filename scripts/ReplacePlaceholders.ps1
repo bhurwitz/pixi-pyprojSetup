@@ -45,9 +45,7 @@ param (
 # The module path should be absolute, but we may not want to reveal our full path.
 $modulePath_relative = "."
 $modulePath_abs = (Resolve-Path $modulePath_relative).Path
-Write-Host "Path to this folder: $modulePath_abs"
 $env:PSModulePath += ";$modulePath_abs"
-Write-Host "PS module path: $env:PSModulePath"
 
 # Import the Logging module for nice printing. It lives in <Documents\PowerShell (and WindowsPowerShell)\Modules>.
 Import-Module Logging -DisableNameChecking
