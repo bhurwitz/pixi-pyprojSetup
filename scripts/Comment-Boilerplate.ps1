@@ -25,6 +25,12 @@
 .EXAMPLE
     .\Comment-Boilerplate.ps1 -Boilerplate "C:\Test\Boilerplate.md" -Extension ".md" -OutputFile "C:\Test\Output\Boilerplate.md"
     Will prompt you to choose one of the three MD comment styles, then process the Markdown file accordingly, writing the output to the specified path.
+    
+.NOTES
+    Author: Your Name
+    Date: YYYY-MM-DD
+    Version: 1.0.0
+    License: MIT (or other license)
 #>
 
 [CmdletBinding()]
@@ -44,7 +50,12 @@ param(
     [int]$DEBUG_LEVEL = $null
 )
 
-Import-Module Logging
+# We need to add the current path to the PSModulePath so that PS can find the Logging module.
+# The module path should be absolute, but we may not want to reveal our full path.
+$modulePath_relative = "."
+$env:PSModulePath += ";$((Resolve-Path $modulePath_relative).Path)"
+
+Import-Module Logging -DisableNameChecking
 
 if ($Debug -or ($DebugPreference -eq 'Continue')) {
     $DEBUG_LEVEL = [Math]::Max(1, $DEBUG_LEVEL)

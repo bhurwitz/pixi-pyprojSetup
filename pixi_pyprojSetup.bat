@@ -9,19 +9,19 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-set DEBUG=false
+set MODE=VERIFY
+
 set "TAB=    "
 for /f "usebackq delims=" %%A in (
   `powershell -NoProfile -Command "$Host.UI.RawUI.WindowSize.Width"`
 ) do set "COLS=%%A"
 
 REM I'm not clear why, but if I don't clearly define these as nothing at the outset, sometimes multiple runnings of the script will cause them to be set incorrectly. 
-set "CLI_package="
-set "CLI_repo="
-set "CLI_desc="
-set "AUTHOR_DEFINED="
-set "EMAIL_DEFINED="
-set "LICENSE_DEFINED="
+
+set "DEBUG_SET="
+
+set "config_dirPath=%CD%\config"
+
 
 :startOfScript
 
@@ -35,8 +35,8 @@ echo.
 :: Check if pixi is available
 where pixi >nul 2>&1
 if %errorlevel%==1 (
-  echo [ERROR] Pixi is not installed! Exiting...
-  exit /b    
+  call :log "ERROR" Pixi is not installed! Exiting...
+  exit /b 1
 ) else (
     REM echo We're going to update Pixi first.
     REM pixi self-update
@@ -138,8 +138,6 @@ REM if defined ABORT_SCRIPT exit /b 1
 
 :ProcessParameters
 
-set "config_dirPath=%CD%\config"
-
 echo.
 echo.
 echo --- Starting placeholder and config processing ---
@@ -153,9 +151,20 @@ call "%config_dirPath%\pixi_pyprojSetup_config.cmd"
 call "%config_dirPath%\pixi_pyprojSetup_config.cmd"
 call :log "INFO" "Config file loaded."
 
-REM Now we'll set the placeholders.
+REM Add the current path to the PSModulePath so that PS can find modules from within it's scripts. 
+set "PSModulePath=%PSModulePath%;%CFG_scripts_dirPath%"
+REM "%PWSH_PATH%" -NoProfile -Command "echo $env:PSModulePath"
+REM "%PWSH_PATH%" -NoProfile -Command "Get-Module -ListAvailable"
+pause
 
+REM Now we'll set the placeholders and null some definitions.
 set PLACEHOLDER_COUNT=0
+set "CLI_package="
+set "CLI_repo="
+set "CLI_desc="
+set "AUTHOR_DEFINED="
+set "EMAIL_DEFINED="
+set "LICENSE_DEFINED="
 
 :: --- 2. Load Default Placeholder Values ---
 call :LoadPlaceholders "%config_dirPath%\placeholders.DEFAULT"
@@ -300,26 +309,66 @@ if "%PH_license_spdx%"=="NO_LICENSE" (
 call :AddPlaceholder "license_spdx" "%PH_license_spdx%"
 
 
-:CreateProjectDirectory
+:Is_ParentDir_OK
 
 if not exist %PH_parent_dirPath% goto changeParent
 call :log "INFO" "The project directory will be created at '%PH_parent_dirPath%\%PH_package%'.".
 echo.
 choice /M "Is this an acceptable location"
-IF ERRORLEVEL 1 GOTO skipChangeParent
+IF ERRORLEVEL 2 GOTO changeParent
+
+:Does_PackageDir_Exist
+if exist "!PH_parent_dirPath!\!PH_package!" (
+    set "selection="
+    echo.
+    call :log "WARNING" "The package '!PH_package!' already exist in that parent directory."
+    echo Would you like to:
+    echo     1. Select a new package name.
+    echo     2. Select a new parent directory.
+    echo     3. Overwrite the package ^(WARNING -- The old package directory will be entirely deleted.^)
+    echo     4. Quit the script entirely.
+    echo.
+    set /p "selection=>>> "
+    if "%selection%"=="1" goto changePackage
+    if "%selection%"=="2" goto changeParent
+    if "%selection%"=="3" goto delPackage
+    if "%selection%"=="4" goto SafeExit
+    if "ABORT_SCRIPT"=="1" exit /b
+) else (
+    goto assignParentDir
+)
+
+:changePackage
+echo.
+call :PromptForInput package "Enter a new name for the package." "(Should be lower-case or snake-case.)"
+call :AddPlaceholder "package" "!package!"
+call :debug 1 "Package re-set to '!package!'." 
+goto Does_PackageDir_Exist
+
 
 :changeParent
+echo.
 echo Enter the absolute path to the PARENT directory into which the project directory will be created.
 set /p "new_parent=>>> "
 if not exist "!new_parent!" (
     mkdir "!new_parent!"
     call :log "INFO" "A new directory has been created at '!new_parent!'."
 )
-set "parent_dirPath=!new_parent!"
+set "PH_parent_dirPath=!new_parent!"
+goto :Does_PackageDir_Exist
 
-:skipChangeParent
-call :AddPlaceholder "parent_dirPath" "%PH_parent_dirPath%"
-call :log "INFO" "Project will be created in '%PH_parent_dirPath%'"
+
+:delPackage
+choice /M "To confirm, you would like to DELETE the ENTIRE current package directory tree rooted at '!PH_parent_dirPath!\!PH_package!' and create a new package directory in its place"
+if ERRORLEVEL 2 goto Does_PackageDir_Exist
+rmdir /s /q "!PH_parent_dirPath!\!PH_package!"
+goto assignParentDir
+
+
+
+:assignParentDir
+call :AddPlaceholder "parent_dirPath" "!PH_parent_dirPath!"
+call :log "INFO" "Project will be created in '!PH_parent_dirPath!'"
 
 
 :SettingsConfirmation
@@ -342,9 +391,14 @@ if errorlevel 2 (
 
 :InstantiatePixiDirectory
 :: Create and enter project directory
-call :debug 1 "Creating src-layout project directory."
 set "PH_proj_root=%PH_parent_dirPath%\%PH_package%" 
-pixi init %PH_proj_root% --format pyproject 
+call :debug 1 "Creating src-layout project directory in '%PH_proj_root%'."
+pixi init "%PH_proj_root%" --format pyproject 
+if errorlevel 1 (
+  call :log "ERROR" "FAILED TO GENERATE PIXI DIR AT '%PH_proj_root%'. Oops." "Exiting"
+  pause
+  exit /b 1
+)
 call :log "INFO" "Project directory created successfully at '%PH_proj_root%'."
 cd %PH_proj_root%
 call :debug "Current working directory set to '%PH_proj_root%'."
@@ -633,6 +687,10 @@ git push -u origin main
 git push origin v%PH_version%
 
 :skipGitHub
+
+if "%MODE%"=="VERIFY" (
+  "%PWSH_PATH%" -NoProfile -ExecutionPolicy Bypass -File "%CFG_scripts_dirPath%\Compare-FolderTreesAdvanced.ps1" -BaselineDirectory "%PH_parent_dirPath%\testpack_BASELINE" -GeneratedDirectory "%PH_proj_root%" -DebugLevel 1 -ExcludeFolderNames "" -ExcludeFileNames "" -PreviewStructure
+)
 
 
 echo.
@@ -1209,9 +1267,9 @@ rem Uses PowerShell to retrieve the window width.
 rem -------------------------------------------------
 
 if "%~1"=="" (
-    set "linechar=-"
+    set "LINECHAR=-"
 ) else (
-    set "linechar=%~1"
+    set "LINECHAR=%~1"
 )
 
 REM for /f "usebackq delims=" %%B in (`powershell -NoProfile -Command "$cols=$Host.UI.RawUI.WindowSize.Width; Write-Output (New-Object string($env:linechar, $cols))"`) do ( 
@@ -1220,11 +1278,18 @@ REM )
 
 REM Note: The 'COLS' variable is set globally at the beginnning of the script in order to reduce overhead.
 
-for /f "usebackq delims=" %%B in (
-  `powershell -NoProfile -Command "Write-Output ($env:LINECHAR * $env:COLS)"`
-) do (
-  echo %%B
+REM for /f "usebackq delims=" %%B in (
+  REM `powershell -NoProfile -Command "Write-Output ($env:LINECHAR * $env:COLS)"`
+REM ) do (
+  REM echo %%B
+REM )
+
+set "line="
+for /L %%i in (1,1,%COLS%) do (
+    set "line=!line!!LINECHAR!"
 )
+echo !line!
+
 goto :EOF
 
 

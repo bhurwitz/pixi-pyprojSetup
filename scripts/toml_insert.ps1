@@ -52,8 +52,13 @@ param (
     [int]$DEBUG_LEVEL
 )
 
+# We need to add the current path to the PSModulePath so that PS can find the Logging module.
+# The module path should be absolute, but we may not want to reveal our full path.
+$modulePath_relative = "."
+$env:PSModulePath += ";$((Resolve-Path $modulePath_relative).Path)"
+
 # Import the custom Logging module. It lives in <Documents\PowerShell (and WindowsPowerShell)\Modules>.
-Import-Module Logging 
+Import-Module Logging -DisableNameChecking
 
 # Source the JSON-error method
 . "$PSScriptRoot\Convert-JsonWithErrorMapping.ps1"

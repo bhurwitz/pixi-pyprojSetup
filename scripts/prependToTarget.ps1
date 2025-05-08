@@ -1,3 +1,28 @@
+<#
+.SYNOPSIS
+    A brief overview of what the script does.
+
+.DESCRIPTION
+    This script demonstrates how to perform [task/operation] using PowerShell.
+    Expand on what the script accomplishes and any important considerations.
+
+.PARAMETER Param1
+    Description of the first parameter.
+
+.PARAMETER Param2
+    Description of the second parameter (optional).
+
+.EXAMPLE
+    .\MyScript.ps1 -Param1 "Value" -Param2 "AnotherValue"
+    # Brief explanation of what this example demonstrates.
+
+.NOTES
+    Author: Your Name
+    Date: YYYY-MM-DD
+    Version: 1.0.0
+    License: MIT (or other license)
+#>
+
 [CmdletBinding()]
 param(
     # Target file to be updated.
@@ -11,7 +36,12 @@ param(
     [int]$DEBUG_LEVEL
 )
 
-Import-Module Logging
+# We need to add the current path to the PSModulePath so that PS can find the Logging module.
+# The module path should be absolute, but we may not want to reveal our full path.
+$modulePath_relative = "."
+$env:PSModulePath += ";$((Resolve-Path $modulePath_relative).Path)"
+
+Import-Module Logging -DisableNameChecking
 
 if ($DEBUG_LEVEL -gt 0) {
     Set-DebugLevel $DEBUG_LEVEL
