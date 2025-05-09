@@ -9,19 +9,14 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-
-set MODE=VERIFY
-
+REM Some global parameters that are script-agnostic.
 set "TAB=    "
 set "TTAB=%TAB%%TAB%"
 for /f "usebackq delims=" %%A in (
   `powershell -NoProfile -Command "$Host.UI.RawUI.WindowSize.Width"`
 ) do set "COLS=%%A"
 
-REM I'm not clear why, but if I don't clearly define these as nothing at the outset, sometimes multiple runnings of the script will cause them to be set incorrectly. 
-
-set "DEBUG_SET="
-
+REM Sets the directory path to the '\config' subdirectory where the configuration files are located. This needs to be known immediately.
 set "config_dirPath=%CD%\config"
 
 
@@ -47,8 +42,6 @@ if %errorlevel%==1 (
 
 :setGlobalDebug
 
-call :SubsectionHeader "Debug status"
-
 :: ==========================================================
 :: Global Debug Flag
 :: ==========================================================
@@ -63,15 +56,16 @@ if defined DEBUG_LEVEL (
     ) 
     if !DEBUG_LEVEL! GTR %MAX_DEBUG% (
         set DEBUG_LEVEL=%MAX_DEBUG%
-        call :debug !DEBUG_LEVEL! "Debugging was ENABLED at level !DEBUG_LEVEL! via global environmental variable."
+        call :log "debug!DEBUG_LEVEL!" "Debugging was ENABLED at level !DEBUG_LEVEL! via global environmental variable."
         call :log "WARNING" "DEBUG_LEVEL had been set above the maximum of %MAX_DEBUG%, so it was reset to the maximum level."
     )
     if !DEBUG_LEVEL! GTR 0 if !DEBUG_LEVEL! LEQ $MAX_DEBUG% (
-        call :debug !DEBUG_LEVEL! Debugging ENABLED at level !DEBUG_LEVEL! via global environmental variable.
+        call :log "debug!DEBUG_LEVEL!" Debugging ENABLED at level !DEBUG_LEVEL! via global environmental variable.
     )
 )
 
 REM The DEBUG_LEVEL can be overwritten by passing it through the CLI, e.g. "--debug=2", but it (like any CLI parameter for this script) must be quoted in its entirety, e.g. "debug=2" not just debug=2.
+set "DEBUG_SET="
 call :log "debug1" "Looking for a 'debug' CLI parameter..."
 for %%A in (%*) do (
     if not defined DEBUG_SET (
@@ -92,10 +86,10 @@ for %%A in (%*) do (
                 if defined DEBUG_LEVEL (
                     set prevDebug=!DEBUG_LEVEL!
                     set "DEBUG_LEVEL=%%C"
-                    call :debug !DEBUG_LEVEL! "Debugging level ADJUSTED from !prevDebug! to !DEBUG_LEVEL! via the CLI."
+                    call :log "debug!DEBUG_LEVEL!" "Debugging level ADJUSTED from !prevDebug! to !DEBUG_LEVEL! via the CLI."
                 ) else (
                     set "DEBUG_LEVEL=%%C"
-                    call :debug !DEBUG_LEVEL! "Debugging ENABLED at level !DEBUG_LEVEL! via CLI."
+                    call :log "debug!DEBUG_LEVEL!" "Debugging ENABLED at level !DEBUG_LEVEL! via CLI."
                 )
                 set DEBUG_SET=true
             )
@@ -672,7 +666,7 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
         )
         
         REM 4. Then process the template
-        call :debug 1 "%TTAB%Processing..."
+        call :log "debug1" "%TTAB%Processing..."
         call :copy_fromTemplate "!filepath!" "!destFile!" "%PWSH_PATH%" "%CFG_script_prepend%" "!boilerplate!" "%CFG_script_replacePlaceholders%" "%placeholders%" "%CFG_max_placeholder_depth%" %DEBUG_LEVEL%
         
         if defined DEL_BP (
@@ -747,7 +741,7 @@ git push origin v%PH_version%
 
 :skipGitHub
 
-if "%MODE%"=="VERIFY" (
+if defined VERIFY (
   "%PWSH_PATH%" -NoProfile -ExecutionPolicy Bypass -File "%CFG_scripts_dirPath%\Compare-FolderTreesAdvanced.ps1" -BaselineDirectory "%PH_parent_dirPath%\testpack_BASELINE" -GeneratedDirectory "%PH_proj_root%" -DebugLevel 1 -ExcludeFolderNames "" -ExcludeFileNames "" -PreviewStructure
 )
 
@@ -788,7 +782,7 @@ call :log "debug2" "In 'copy_withMsg'" "Source: '%SOURCE%'" "Destination: '%DEST
 
 copy "%SOURCE%" "%DEST%" >nul
 if %errorlevel%==0 (
-    call :debug 2 "%TAB%Successfully copied ^<%SOURCE%^> to ^<%DEST%^>."
+    call :log "debug2" "%TAB%Successfully copied ^<%SOURCE%^> to ^<%DEST%^>."
 ) else (
     call :log "ERROR" "%TAB%FAILED TO COPY ^<%SOURCE%^> to ^<%DEST%^>. Continuing."
 )
@@ -827,7 +821,7 @@ set "_DEBUG_LEVEL=%~9"
 REM set "COMMENT_BP_SCRIPT=%~8"
 
 REM First, a debug-printing step.
-call :debug "------------------------------------------------------------------" " " "In 'copy_fromTemplate'" "Source: '%SOURCE%'" "Destination: '%DEST%'" "Prepend script path: '%PREPEND_SCRIPT%'" "Boilerplate filepath: '%BOILERPLATE%'" "Replacement script path: '%REPLACEMENT_SCRIPT%'" "Placeholders filepath: '%PLACEHOLDERS%'" "Max placeholder depth: '%MAX_PLACEHOLDER_DEPTH%'" "Debug level: '%_DEBUG_LEVEL%'"
+call :log "debug1" "------------------------------------------------------------------" " " "In 'copy_fromTemplate'" "Source: '%SOURCE%'" "Destination: '%DEST%'" "Prepend script path: '%PREPEND_SCRIPT%'" "Boilerplate filepath: '%BOILERPLATE%'" "Replacement script path: '%REPLACEMENT_SCRIPT%'" "Placeholders filepath: '%PLACEHOLDERS%'" "Max placeholder depth: '%MAX_PLACEHOLDER_DEPTH%'" "Debug level: '%_DEBUG_LEVEL%'"
 
 
 REM Second, we copy the source file (the template) into the new destination.
@@ -878,78 +872,16 @@ pause
 exit /b 1
 
 
-:: ==========================================================
-:: Centralized Debug/Logging Subroutine
-:: Method for printing debugging statements.
-:: Optionally takes a numeric level as the first parameter.
-:: If the first parameter does not start with a digit then level defaults to 1.
-:: Usage: call :debug [level] "Message 1" "Message 2" ...
-:: ==========================================================
 
-:: MAJOR NOTE!! I originally wanted to write wrappers for this functionality (e.g. 'debug1') and make this into an internal helper function. The issue is that passing an arbitrary number of arguments from 'debug1' to 'debug' would have been fragile. The "obvious" way to do is to call, from within 'debug1', 'call :debug 1 %*', where the '%*' would pass all the subsequent arguments. The issue is that this notation doesn't work within certain contexts (e.g. loops or other blocks wih extra parsing) and 'DelayedExpansion' interferes with it. There is way to avoid it - you loop over all the passed arguments to build a single string and pass that - but that kind of defeats the purpose of the wrapper since each of the wrappers would need this nearly-identical code. So instead, it's preferred here to use a single method that's a bit more flexible at the expense of an extra subroutine parameter.
-:: All this is to say, don't try breaking this up into wrappers. 
+:: ==========================================================
+:: Centralized print-statement method
 ::
-:: Also, no calling :debug from within this method - everything breaks due to the recursion.
-
-:debug
-setlocal EnableDelayedExpansion
-
-REM echo These arguments were passed to 'debug': %*
-
-:: If global debugging is off, exit this gracefully and early.
-if "!DEBUG_LEVEL!"=="0" (
-    endlocal
-    goto :eof
-)
-
-:: Check if the first argument is non-empty and if its first character is a digit.
-set "firstArg=%~1"
-if defined firstArg (
-    set "firstChar=%firstArg:~0,1%"
-) else (
-    set "firstChar="
-)
-
-:: If firstChar is a digit (between "0" and "9"), use it as the debug level.
-:: Otherwise, default to level 0.
-if defined firstChar (
-  if "!firstChar!" gtr "0" if "!firstChar!" leq "9" (
-      set "level=%~1"
-      shift
-  ) else (
-      set "level=0"
-  )
-)
-
-:: Only output debug messages if the global DEBUG_LEVEL is at least as high as the message level.
-if !DEBUG_LEVEL! LSS !level! (
-    endlocal
-    goto :eof
-)
-
-echo.
-:debug_loop
-if "%~1"=="" goto after_debug
-REM call :log "debug4" "Next argument: '%~1'"
-echo [DEBUG] %~1 1>&2
-shift
-goto debug_loop
-
-:after_debug
-REM call :log "debug4" "End of debugging subroutine - no more arguments."
-endlocal
-goto :eof
-
-
-:: ==========================================================
-:: Centralized logging method
-::
-:: Method for printing non-debugging statements with some sort of standard.
+:: Method for printing statements with some sort of standard.
 :: ('Logging' here doesn't mean it logs to a file. Only the 'ERROR' level will output to the stderr stream.)
 ::
 :: Parameters:
-::      %1: The severity. This should be 'INFO', 'WARNING', or 'ERROR', but technically it could be anything (within reason, giving the limitations of Batch).
-::      %2... %N: Any number of strings. These will be printed in order, each on it's own line with it's own severity indicator.
+::      %1: The severity. This should be 'INFO', 'WARNING', 'ERROR', or 'DEBUG<LEVEL>', but technically it could be anything (within reason, giving the limitations of Batch). The <LEVEL> here would be 1, 2, 3, or 4, and corresponds to the level of the global variable DEBUG_LEVEL at or above which the statement prints.
+::      %2... %N: Any number of strings. These will be printed in order, each on it's own line. The first line will get the severity indicator, subsequent lines will be indent.
 ::
 :: Usage: 
 ::      call :log "INFO" "This is some information."
@@ -958,75 +890,6 @@ goto :eof
 ::      I originally wanted to write wrappers for this functionality (e.g. 'warn', or 'info') and make this into an internal helper function. The issue is that passing an arbitrary number of arguments from 'info' to 'log' would have been fragile. The "obvious" way to do is to call, from within 'info', 'call :log "INFO" %*', where the '%*' would pass all the subsequent arguments. The issue is that this notation doesn't work within certain contexts (e.g. loops or other blocks wih extra parsing) and 'DelayedExpansion' interferes with it. There is way to avoid it - you loop over all the passed arguments to build a single string and pass that - but that kind of defeats the purpose of the wrapper since each of the wrappers would need this nearly-identical code. So instead, it's preferred here to use a single method that's a bit more flexible at the expense of an extra subroutine parameter.
 :: All this is to say, don't try breaking this up into wrappers. 
 :: ==========================================================
-
-REM :log
-REM call :log "debug4" "Inside the 'log' subroutine."
-
-REM set "severity=%~1"
-REM call :log "debug4" "Severity set to '%~1'."
-REM shift
-REM call set "args=%*"
-
-REM if /I "!severity:~0,5!"=="debug" (
-    REM REM Extract the 6th character (i.e. at index 5)
-    REM set "level=!severity:~5,1!"
-    REM call :debug !level! !args!
-    REM exit /b 0
-REM )
-
-
-REM if /I "%severity%"=="ERROR" (
-  REM call :log "debug4" "This will send messages to stderr."
-REM ) else (
-  REM call :log "debug4" "This is NOT an error (it was '%severity%'), so will print normally."
-REM )
-
-REM REM Print first argument on same line as severity.
-REM REM Subsequent arguments will be on intended unlabeled lines.
-
-REM set "msg=%~1"
-REM if /I "%severity%"=="ERROR" (
-  REM echo.
-  REM echo --[ERROR]-- %msg%1>&2
-REM ) else (
-    REM if "%severity%"=="WARNING" (
-      REM echo.
-      REM echo -[WARNING]- %msg%
-    REM ) else (
-        REM echo [%severity%]: %msg%
-    REM )
-REM )
-REM shift
-
-REM setlocal EnableDelayedExpansion
-
-REM :log_loop
-REM if "%~1"=="" goto log_done
-REM call :log "debug4" "Next argument: '%~1'"
-REM REM set "msg=!msg! %~1"
-REM REM call :log "debug4" "Message is now: '!msg!'"
-REM REM shift
-REM REM goto log_loop
-
-REM set "msg=%~1"
-REM if /I "%severity%"=="ERROR" (
-  REM echo     !msg! 1>&2
-REM ) else (
-  REM echo     !msg!
-REM )
-REM shift
-REM goto log_loop
-
-
-REM :log_done
-REM REM Basic example: errors go to stderr.
-REM call :log "debug4" "End of 'log' subroutine - no more arguements."
-
-REM endlocal
-REM goto :eof
-
-::-------------------------------------------------------------------------
-::-------------------------------------------------------------------------
 
 :log
 REM call :log "debug4" "Inside the 'log' subroutine."
@@ -1110,52 +973,6 @@ REM echo And that was the end of 'log'.
 goto :eof
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 :: ==========================================================
 :: LoadPlaceholders Subroutine
 :: Reads key=value pairs from a file and sets them as plain variables.
@@ -1231,6 +1048,12 @@ call :log "debug2" "Arg = !arg!"
 
 :: Remove leading '--' if present
 if "!arg:~0,2!"=="--" set "arg=!arg:~2!"
+
+if \I "!arg!"=="verify" (
+    set "VERIFY=true"
+    shift
+    goto ParseArgsLoop
+)
 
 :: Split at '=' to extract key (param) and value (val)
 for /F "tokens=1,* delims==" %%A in ("!arg!") do (

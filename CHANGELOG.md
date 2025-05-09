@@ -53,8 +53,6 @@ Changelog formatting:
  - Ask for packages to incorporate (with a list of options, likely, and probably a config file for each with a set of commands that need running to load them properly, and probably other settings like things to add to the gitignore), and then run the config commands.
  - Some way to deal with the fact that my 'comment-boilerplate' method offers three different commenting options, but only one can be saved for future use (because of the way I deal with BPs right now).
  - Passing pixi tasks, somehow, possibly with a config file. 
- - More error catching with 'errorlevel' and redirecting output.
- - Testing with 
  
 ### Fixed
 
@@ -117,6 +115,7 @@ Changelog formatting:
  - A new input confirmation loop subroutine is implemented.
  - Double checks the given parent\package path for viability before writing.
  - A directory tree comparison PS method is implemented and lives in the 'scripts' subdirectory.
+ - A 'verify' flag is added that enabled directory creation comparion with a baseline to confirm 
 
 ### Fixed
 
