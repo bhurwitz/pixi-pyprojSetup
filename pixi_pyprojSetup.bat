@@ -1046,8 +1046,9 @@ if "%~1"=="" goto EndParseArgs
 set "arg=%~1"
 call :log "debug2" "Arg = !arg!"
 
-:: Remove leading '--' if present
+:: Remove leading '--' or '-' if present
 if "!arg:~0,2!"=="--" set "arg=!arg:~2!"
+if "!arg:~0,1!"=="-" set "arg=!arg:~1!"
 
 if \I "!arg!"=="verify" (
     set "VERIFY=true"
