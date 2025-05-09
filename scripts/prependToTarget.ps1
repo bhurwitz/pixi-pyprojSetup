@@ -80,11 +80,11 @@ foreach ($item in $PrependItems) {
         Log-Debug3 "Value '$item' is interpreted as literal text."
     }
     # Append the content along with a newline separator.
-    $prependContent += $content + "`n"
+    $prependContent += $content + "`r`n"
 }
 
 # Optionally add an extra newline between the prepended block and the original content.
-$combined = $prependContent + "`n" + $originalContent
+$combined = $prependContent + "`r`n" + $originalContent
 
 # Write the combined content back to the target file.
 Set-Content -Path $TargetFile -Value $combined
