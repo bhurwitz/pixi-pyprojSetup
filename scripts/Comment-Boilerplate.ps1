@@ -73,10 +73,10 @@ else {
 
 
 Log-Debug2 "Starting Comment-Boilerplate processing."
-Log-Debug3 "Boilerplate: $Boilerplate"
-Log-Debug3 "Extension: $Extension"
-Log-Debug3 "OutputFile: $OutputFile"
-Log-Debug3 "ScanLength: $ScanLength"
+Log-Debug3 "    Boilerplate: $Boilerplate"
+Log-Debug3 "    Extension: $Extension"
+Log-Debug3 "    OutputFile: $OutputFile"
+Log-Debug3 "    ScanLength: $ScanLength"
 
 # Determine the comment marker based on the file extension.
 # For most extensions we use a fixed marker; for Markdown (.md) we offer three user options.

@@ -48,6 +48,10 @@ if ($DEBUG_LEVEL -gt 0) {
     Log-Status "Debugging enabled at level $DEBUG_LEVEL in 'prependToTarget.ps1'."
 }
 
+Log-Debug2 "Parameters:"
+Log-Debug2 "    Target file: $TargetFile"
+Log-Debug2 "    Prepend Items: $($PrependItems)"
+
 # Read the original target file content (or assume empty if it doesn't exist)
 if (Test-Path $TargetFile) {
     $originalContent = Get-Content -Path $TargetFile -Raw
@@ -72,12 +76,12 @@ foreach ($item in $PrependItems) {
     if (Test-Path $item) {
         # If the item is a file, read its content
         $content = Get-Content -Path $item -Raw
-        Log-Debug3 "Value '$item' is interpreted as a file. Adding its contents."
+        Log-Debug2 "Value '$item' is interpreted as a file. Adding its contents."
     }
     else {
         # If not, treat it as literal text.
         $content = $item
-        Log-Debug3 "Value '$item' is interpreted as literal text."
+        Log-Debug2 "Value '$item' is interpreted as literal text."
     }
     # Append the content along with a newline separator.
     $prependContent += $content + "`r`n"

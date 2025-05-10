@@ -32,7 +32,7 @@ param (
     [string]$OutputFile,
 
     [Parameter(Mandatory=$true)]
-    [string]$EnvFile,
+    [string]$PlaceholdersFile,
 
     [Parameter()]
     [int]$MaxIterations = 10,
@@ -88,45 +88,52 @@ if ($DEBUG_LEVEL -gt 0) {
     Log-Status "Debugging is enabled at level $DEBUG_LEVEL in 'ReplacePlaceholders.ps1'."
 }
 
+Log-Debug2 "Parameters:"
+Log-Debug2 "    Input file: $InputFile"
+Log-Debug2 "    Output file: $OutputFile"
+Log-Debug2 "    Placeholders file: $PlaceholdersFile"
+Log-Debug2 "    Max iterations: $MaxIterations"
+
+
 if ((-not (Test-Path $InputFile)) -or ((Get-Item $InputFile).length -eq 0)) {
     Log-Warning "The input file passed to 'ReplacePlaceholders.ps1' is missing or empty. No replacements performed."
     exit 1
 }
 
-if ((-not (Test-Path $EnvFile)) -or ((Get-Item $EnvFile).length -eq 0)) {
+if ((-not (Test-Path $PlaceholdersFile)) -or ((Get-Item $PlaceholdersFile).length -eq 0)) {
     Log-Warning "The placeholders file passed to 'ReplacePlaceholders.ps1' is missing or empty. No replacements performed."
     exit 1
 }
 
 
 # Log: Show full environment file contents.
-Log-Debug2 "Loading environment file: $EnvFile"
-$lines = Get-Content $EnvFile
-Log-Debug2 "Environment file has $($lines.Count) line(s):"
-$lines | ForEach-Object { Log-Debug2 "  $_" }
+# Log-Debug3 "Loading environment file: $PlaceholdersFile"
+$lines = Get-Content $PlaceholdersFile
+Log-Debug3 "Environment file has $($lines.Count) line(s):"
+$lines | ForEach-Object { Log-Debug3 "  $_" }
 
 # Build the replacements table.
 $replacements = @{}
 foreach ($line in $lines) {
-    Log-Debug3 "`nProcessing line: $line"
+    Log-Debug4 "`nProcessing line: $line"
     if ($line -match '^(.*?)=(.*)$') {
         $key = $matches[1].Trim()
         $value = $matches[2].Trim()
-        Log-Debug3 "Parsed key: '$key' and value: '$value'"
+        Log-Debug4 "    Parsed key: '$key' and value: '$value'"
         
         # Create placeholder by surrounding the key with braces.
         $placeholder = '{' + $key + '}'
-        Log-Debug3 "Mapping placeholder '$placeholder' to value '$value'"
+        Log-Debug4 "    Mapping placeholder '$placeholder' to value '$value'"
         $replacements[$placeholder] = $value
     } else {
-        Log-Debug3 "Line did not match expected pattern: $line"
+        Log-Debug4     "Line did not match expected pattern: $line"
     }
 }
 
 # Log: Show the entire replacement table.
-Log-Debug2 "`nReplacement table:"
+Log-Debug3 "`nReplacement table:"
 $replacements.GetEnumerator() | ForEach-Object {
-   Log-Debug2 "  $($_.Key) -> $($_.Value)"
+   Log-Debug3 "  $($_.Key) -> $($_.Value)"
 }
 
 # Read the input file.
@@ -142,7 +149,7 @@ for ($i = 0; $i -lt $MaxIterations; $i++) {
     foreach ($key in $replacements.Keys) {
         $escapedKey = [regex]::Escape($key)
         if ($fileContent -match $escapedKey) {
-            Log-Debug3 "`nReplacing placeholder '$key' with '$($replacements[$key])'"
+            Log-Debug4 "`nReplacing placeholder '$key' with '$($replacements[$key])'"
             $fileContent = $fileContent -replace $escapedKey, $replacements[$key]
         }
     }
@@ -162,34 +169,3 @@ Log-Debug2 ($fileContent.Substring(0, [Math]::Min(300, $fileContent.Length)))
 # Write the content to the output file.
 Set-Content $OutputFile $fileContent
 Log-Debug2 "`nOutput file written successfully to: $OutputFile"
-
-
-
-
-
-
-##################################### The below only worked for a single pass.
-# # Read the input file.
-# Write-Host "`nReading input file: $InputFile"
-# $fileContent = Get-Content $InputFile -Raw
-# Write-Host "Original file content (first 300 chars):"
-# Write-Host ($fileContent.Substring(0, [Math]::Min(300, $fileContent.Length)))
- 
-# # Perform the replacements only when the placeholder exists.
-# foreach ($key in $replacements.Keys) {
-    # $escapedKey = [regex]::Escape($key)
-    # if ($fileContent -match $escapedKey) {
-        # Write-Host "`nReplacing placeholder '$key' with '$($replacements[$key])'"
-        # $fileContent = $fileContent -replace $escapedKey, $replacements[$key]
-    # } else {
-        # Write-Host "`nPlaceholder '$key' not found in the file content; skipping replacement."
-    # }
-# }
-
-# # Log: Show final content before writing out.
-# Write-Host "`nFinal file content (first 300 chars):"
-# Write-Host ($fileContent.Substring(0, [Math]::Min(300, $fileContent.Length)))
-
-# # Write the content to the output file.
-# Set-Content $OutputFile $fileContent
-# Write-Host "`nOutput file written successfully to: $OutputFile"

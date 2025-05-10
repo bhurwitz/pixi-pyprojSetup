@@ -90,6 +90,10 @@ if ($DEBUG_LEVEL -gt 0) {
     Log-Status "Debugging is enabled at level $DEBUG_LEVEL in 'toml_replace.ps1'."
 }
 
+Log-Debug2 "Parameters:"
+Log-Debug2 "    File: $File"
+Log-Debug2 "    Replacements: $Replacements"
+Log-Debug2 "    Config file: $ConfigFile"
 
 #####################################################################
 ## Parse the configuration file, if one was passed.
