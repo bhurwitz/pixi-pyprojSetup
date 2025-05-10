@@ -1,4 +1,0 @@
-# This is a text file used for testing string replacement in batch via PowerShell with special characters using 'escapeChar_testing.bat'
-
-{package}
-{version}

@@ -1,1 +1,0 @@
-set "CFG_boilerplate_name={license_spdx}_BP"

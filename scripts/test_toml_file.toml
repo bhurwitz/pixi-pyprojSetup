@@ -1,8 +1,0 @@
-[package]
-name = "{package}"
-version = "0.1.0"
-readme = "README.md"
-license-files = "["LICENSE.txt"]"
-license-name = "{license_spdx}"
-description = "{description}"
-authors = [{name = "Default Name", email = "default@name.com"}]

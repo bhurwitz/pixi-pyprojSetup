@@ -188,7 +188,7 @@ if exist "%PWSH_PATH%" (
 )
 
 REM Add the scripts directory path to the PSModulePath so that PS can find modules from within it's scripts. 
-set "PSModulePath=%PSModulePath%;%CFG_scripts_dirPath%"
+set "PSModulePath=%PSModulePath%;%CFG_scripts_dirPath%\PSModules"
 REM "%PWSH_PATH%" -NoProfile -Command "echo $env:PSModulePath"
 REM "%PWSH_PATH%" -NoProfile -Command "Get-Module -ListAvailable"
 
