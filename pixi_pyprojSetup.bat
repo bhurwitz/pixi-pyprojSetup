@@ -1,10 +1,4 @@
-:: This file is copyrighted by Ben Hurwitz <bchurwitz+pixi_pyprojSetup@gmail.com>, 2025, under the GNU GPL v3.0. 
-:: Much of this file was written with the help of ChatGPT, versions GPT-4o, GPT-4o mini, and o3-mini.
-:: See <https://chatgpt.com/share/67ffcd98-a7a8-800e-9dcd-8c4b78f895f8> and <https://chatgpt.com/share/68029d02-9f70-800e-a201-8765513870a8>
-::
-:: This file is version-controlled via git and saved on GitHub under the repository <https://github.com/bhurwitz/pixi-pyprojSetup>
-::
-:: TODO: Incorporate semantic-release (https://python-semantic-release.readthedocs.io/en/latest/) for versioning and changelog.
+
 
 @echo off
 setlocal EnableDelayedExpansion
@@ -827,11 +821,23 @@ git push origin v%PH_version%
 
 :skipGitHub
 
-if defined VALIDATE (
-  "%PWSH_PATH%" -NoProfile -ExecutionPolicy Bypass -File "%CFG_scripts_dirPath%\Compare-FolderTreesAdvanced.ps1" -BaselineDirectory "%PH_parent_dirPath%\testpack_BASELINE" -GeneratedDirectory "%PH_proj_root%" -ExcludeFolderNames "" -ExcludeFileNames "" -PreviewStructure -DebugLevel %DEBUG_LEVEL%
-)
+:validate
+if not defined VALIDATE goto scriptWrapup
+
+:validateCheckPath
+if not exist "%VALIDATE_BASELINE_DIR%" (
+    call :log "ERROR" "Validation path '%VALIDATE_BASELINE_DIR%' does not exist."
+    choice /M "Would you like to set another"
+    if ERRORLEVEL EQU 2 goto scriptWrapup
+    call :PromptForInput VALIDATE_BASELINE_DIR "Please enter a new path to the root directory that you'd like to compare the generated directory with."
+    goto validateCheckPath
+) 
+call :log "INFO" "Checking generated structure against '%VALIDATE_BASELINE_DIR%'..."
+
+"%PWSH_PATH%" -NoProfile -ExecutionPolicy Bypass -File "%CFG_scripts_dirPath%\Compare-FolderTreesAdvanced.ps1" -BaselineDirectory "%VALIDATE_BASELINE_DIR%" -GeneratedDirectory "%PH_proj_root%" -ExcludeFolderNames "" -ExcludeFileNames "" -PreviewStructure -DebugLevel %DEBUG_LEVEL%
 
 
+:scriptWrapup
 echo.
 call :log "INFO" "Project setup COMPLETE"
 echo.
@@ -845,6 +851,8 @@ echo ^>^>^> Alternative, run ^'pixi run python -m %PH_package%^' from within the
 echo.
 
 pause
+
+:endOfScript
 
 :: Cleanup
 REM del %placeholders%
@@ -1132,25 +1140,18 @@ exit /b 0
 :ParseArguments
 call :ResetError
 call :log "debug2" "In ParseArguments"
-REM echo Errorlevel: %ERRORLEVEL%
+
 :ParseArgsLoop
 call :log "debug3" "At the top of the 'ParseArgsLoop'"
 if "%~1"=="" goto EndParseArgs
-REM echo Errorlevel: %ERRORLEVEL%
+
 set "arg=%~1"
 call :log "debug2" "Arg = !arg!"
-REM echo Errorlevel: %ERRORLEVEL%
+
 :: Remove leading '--' or '-' if present
 if "!arg:~0,2!"=="--" set "arg=!arg:~2!"
 if "!arg:~0,1!"=="-" set "arg=!arg:~1!"
-REM echo Errorlevel: %ERRORLEVEL%
-REM Check for the 'validate' flag.
-if /I "!arg!"=="validate" (
-    set "VALIDATE=true"
-    shift
-    goto ParseArgsLoop
-)
-REM echo Errorlevel: %ERRORLEVEL%
+
 REM Check for the 'debug' flag.
 REM This would usually be set to a specific level using a 'key=val' pair, but if not, we should catch it.
 REM Since any 'debug' flag should be taken care of early in the script, we actually just skip over it. 
@@ -1159,7 +1160,7 @@ if /I "!arg:~0,5!"=="debug" (
     shift
     goto ParseArgsLoop
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 REM At this point, we'll check for an '=' sign and loop if we don't see it.
 if "!arg!"=="!arg:=!" (
@@ -1168,7 +1169,7 @@ if "!arg!"=="!arg:=!" (
     shift
     goto ParseArgsLoop
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 :: Split at '=' to extract key (param) and value (val)
 for /F "tokens=1,* delims==" %%A in ("!arg!") do (
@@ -1176,7 +1177,7 @@ for /F "tokens=1,* delims==" %%A in ("!arg!") do (
     set "val=%%B"
     call :log "debug3" "Arg parsed as '!param!' and '!val!'."
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 REM If the parameter is empty, shift and loop.
 if "!param!"=="" (
@@ -1184,7 +1185,15 @@ if "!param!"=="" (
     shift
     goto ParseArgsLoop
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
+REM Check for the 'validate' flag. It's not a placeholder, so we do this before that.
+if /I "!arg!"=="validate" (
+    set "VALIDATE=true"
+    set "VALIDATE_BASELINE_DIR=!val!"
+    shift
+    goto ParseArgsLoop
+)
+
 
 REM I check for known parameters first, and then highlight unknown ones.
 REM "Known" here is based from the keys that we've seen from the placeholders files.
@@ -1192,13 +1201,13 @@ if not defined PLACEHOLDER_COUNT (
     call :log "WARNING" "The 'PLACEHOLDER_COUNT' variable hasn't been defined for some reason?" "This is more of a debugging message, but also, it should absolutely have been defined already, so it might be concerning for the functionality of the script. "
     goto addParam
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 if "%PLACEHOLDER_COUNT%"=="0" (
     call :log "debug2" "No placeholders have been defined, so these are all new."
     goto addParam
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 REM These lines allow for spelling variations.
 if /I "!param!"=="license-spdx" set "param=license_spdx"
@@ -1211,7 +1220,7 @@ if /I "!param!"=="project_root" set "param=proj_root"
 if /I "!param!"=="project-root" set "param=proj_root"
 if /I "!param!"=="repo-name" set "param=repo_name"
 if /I "!param!"=="parent-dirPath" set "param=parent_dirPath"
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 set "found="
 for /L %%N in (1,1,%PLACEHOLDER_COUNT%) do (
@@ -1221,13 +1230,13 @@ for /L %%N in (1,1,%PLACEHOLDER_COUNT%) do (
         )
     )
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 if not defined found (
     call :log "WARNING" "Unknown placeholder '!param!' with value '!val!' is being passed over CLI." "The placeholder will be set, but just so you know, it's not one of the previously-defined keys."
     goto addParam
 )
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 REM These are known parameters that need additional handling.
 if /I "!param!"=="package" set "CLI_package=1"
@@ -1238,20 +1247,16 @@ if /I "!param!"=="description" set "CLI_desc=1"
 if /I "!param!"=="repo_name" set "CLI_repo=1"
 
 call :log "debug3" "'!param!', a known placeholder, seen via CLI."  
-REM echo Errorlevel: %ERRORLEVEL%
+
 
 REM All parameters that are passed are added to the Placeholders "list" for later processing.
 REM These will be accessible later as well via 'PH_%param%'. 
 :addParam
 call :AddPlaceholder "%param%" "%val%"
-
-
-REM echo Errorlevel: %ERRORLEVEL%
-
 shift
 goto ParseArgsLoop
+
 :EndParseArgs
-REM echo Errorlevel: %ERRORLEVEL%
 call :log "debug2" "End of 'ParseArgsLoop' - no more arguments."
 goto :eof
 
@@ -1324,8 +1329,8 @@ for /L %%N in (1,1,%PLACEHOLDER_COUNT%) do (
 if not defined AUTHOR_DEFINED (
     call :log "debug2" "CLI argument not provided for author; prompting."
     call :PromptForInput author "Enter a name for an author of this package."
-    call :AddPlaceholder "author" "!auth_temp!"
-    call :log "debug3" "author set to '!auth_temp!'." 
+    call :AddPlaceholder "author" "!author!"
+    call :log "debug3" "author set to '!author!'." 
     set "MISSING_INPUTS=true"
 ) else (
     call :log "debug2" "Author was already defined as '!auth_temp!', no prompt needed."
@@ -1334,11 +1339,21 @@ if not defined AUTHOR_DEFINED (
 if not defined EMAIL_DEFINED (
     call :log "debug2" "CLI argument not provided for email; prompting."
     call :PromptForInput email "Enter a contact email address." "No validation is done here."
-    call :AddPlaceholder "email" "!email_temp!"
-    call :log "debug3" "email set to '!email_temp!'." 
+    call :AddPlaceholder "email" "!email!"
+    call :log "debug3" "email set to '!email!'." 
     set "MISSING_INPUTS=true"
 ) else (
     call :log "debug2" "Email was already defined as '!email_temp!', no prompt needed."
+)
+
+if defined VALIDATE 
+    if "%VALIDATE_BASELINE_DIR%=="" (
+        call :log "debug2" "CLI flag for validate was passed but the baseline directory seems to be empty."
+        call :PromptForInput VALIDATE_BASELINE_DIR "Enter the absolute path to the directory you'd like to compare the generated directory to." "No validation is done here."
+        call :log "debug3" "VALIDATE_BASELINE_DIR set to '!VALIDATE_BASELINE_DIR!'."
+    ) else (
+        call :log "debug2" "Validation directory set to '%VALIDATE_BASELINE_DIR%'."
+    )
 )
 
 call :log "debug2" "End of CollectMissingInputs."
