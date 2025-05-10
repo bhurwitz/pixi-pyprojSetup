@@ -56,6 +56,7 @@ Changelog formatting:
  - Should dates that are explicitly passed as parameters be verified to be a certain format?
  - There's probably a nice way to print messages around a function. I thought about using 'log' with a new severity level and 'call %~3' to call the subroutine as a passed paramter, but I didn't want to dedicate time to testing that.
  - "Need" some error testing in the PS scripts and then error catching the main function. 
+ - Should the placeholders be required to used braces to be replaced? Perhaps that character should be adjustable, or the exact placeholder string should be replaced without expectation of characters, e.g. if 'package' is the key, instead of replacing '{package}' it should replaced just 'package', so if you wanted to replace '{package}', the key in the placeholders file should be just that: '{package}'.
  
 ### Fixed
 

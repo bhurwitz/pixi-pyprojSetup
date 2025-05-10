@@ -1,3 +1,22 @@
+<# 
+Package: pixi_pyprojSetup
+
+Copyright (C) 2025  Ben Hurwitz <bchurwitz+pixi_pyprojSetup> under GNU GPL v3.0.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#>
+
 <# toml_replace.ps1
 
 .SYNOPSIS  
@@ -17,7 +36,7 @@
     An object or JSON-formatted string whose properties are keys to process and whose values are the new values to use in replacement.
 
 .PARAMETER Debug  
-    A switch that, if specified, turns on debugging messages.
+    An integer that specifies the level of debugging verbosity that we're interested in; 0 is no debugging whereas 4 is more than you probably want. If this is left undefined, it will fall back to anything set externally within the same PowerShell instance.
 
 .PARAMETER ConfigFile  
     The path to a JSON configuration file. If provided, parameters from the config file override any command-line parameters EXCEPT 'Debug'. If 'Debug' is set on the CLI, it cannot be overriden by the configuration file.
@@ -26,7 +45,13 @@
     # Replace keys using a config file:
     .\toml_replace_only.ps1 -ConfigFile "toml_replace_only.config"
 
-.NOTES  
+.NOTES
+    Author: Ben Hurwitz
+    Email: bchurwitz+pixi_pyprojSetup@gmail.com
+    Date: 2025-May-10
+    Version: 1.0.0
+    License: GNU GPL v3.0 (see above)
+    Compatability: PowerShell 5.1 and 7
 
 #>
 [CmdletBinding()]

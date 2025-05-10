@@ -1,26 +1,55 @@
-<#
+<# 
+Package: pixi_pyprojSetup
+
+Copyright (C) 2025  Ben Hurwitz <bchurwitz+pixi_pyprojSetup> under GNU GPL v3.0.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#>
+
+<# ReplacePlaceholders.ps1
 .SYNOPSIS
-    A brief overview of what the script does.
+    Replaces placeholder terms with mapped values.
 
 .DESCRIPTION
-    This script demonstrates how to perform [task/operation] using PowerShell.
-    Expand on what the script accomplishes and any important considerations.
+    This script uses a mapping, as defined by a given 'PlaceholdersFile', to replace specific terms in the target file that are wrapped in curly braces with their mapped values. It takes this file, which is made up of one "key=value" pair per line, and generates a hashtable with the placeholders (keys) from the file used as the keys of the table mapped to the associated replacements (values). Then it loops up to $MaxIterations number of times over the list of hashtable keys, replacing each with the associate value, thereby enabling deeply-nested keys. For example, if the $PlaceholdersFile has a line 'name=myName' (without quotes), anywhere in the $InputFile where the string '{name}' (without quotes but with braces) appears will be replaced with 'myName' (still without quotes and without braces). 
 
-.PARAMETER Param1
-    Description of the first parameter.
+.PARAMETER InputFile
+    The file to have the operation completed upon.
 
-.PARAMETER Param2
-    Description of the second parameter (optional).
+.PARAMETER OutputFile
+    The resulting file. This may be the same as the input file if you're overwriting the input.
+    
+.PARAMETER PlaceholdersFile
+    The mapping file. There is no required filetype. It needs only to have one 'placeholder=replacement' pair per line, in that specific format. 
+    
+.PARAMETER MaxIterations
+    The maximum number of iterations of the placeholders list the script will loop through. This generally refers to the maximum nesting depth of placeholders. It defaults to 10.
+    
+.PARAMETER DEBUG_LEVEL
+    An integer that specifies the level of debugging verbosity that we're interested in; 0 is no debugging whereas 4 is more than you probably want. If this is left undefined, it will fall back to anything set externally within the same PowerShell instance.
 
 .EXAMPLE
-    .\MyScript.ps1 -Param1 "Value" -Param2 "AnotherValue"
-    # Brief explanation of what this example demonstrates.
+    .\ReplacePlaceholders.ps1 -InputFile main.py -OutputFile main_replaced.py -PlaceholdersFile replacementMapping.myfiletype
+    # This takes in 'main.py', applies replacements according to 'replacementMapping.myfiletype', and writes the resulting file to 'main_replaced.py'
 
 .NOTES
-    Author: Your Name
-    Date: YYYY-MM-DD
+    Author: Ben Hurwitz
+    Email: bchurwitz+pixi_pyprojSetup@gmail.com
+    Date: 2025-May-10
     Version: 1.0.0
-    License: MIT (or other license)
+    License: GNU GPL v3.0 (see above)
+    Compatability: PowerShell 5.1 and 7
 #>
 
 [CmdletBinding()]

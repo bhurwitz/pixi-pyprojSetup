@@ -1,26 +1,50 @@
-<#
+<# 
+Package: pixi_pyprojSetup
+
+Copyright (C) 2025  Ben Hurwitz <bchurwitz+pixi_pyprojSetup> under GNU GPL v3.0.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#>
+
+<# Convert-JsonWithErrorMapping.ps1
 .SYNOPSIS
-    A brief overview of what the script does.
+    A wrapper for Convert-Json with some extra error handling.
 
 .DESCRIPTION
-    This script demonstrates how to perform [task/operation] using PowerShell.
-    Expand on what the script accomplishes and any important considerations.
+    This script provides a wrapper for the Convert-Json function with a try/catch block for some more verbose error handling.
 
-.PARAMETER Param1
-    Description of the first parameter.
-
-.PARAMETER Param2
-    Description of the second parameter (optional).
+.PARAMETER JsonString
+    The JSON string that is being converted. 
 
 .EXAMPLE
-    .\MyScript.ps1 -Param1 "Value" -Param2 "AnotherValue"
-    # Brief explanation of what this example demonstrates.
+    # You dot source the file first
+    . <path-to-parent>\Convert-JsonWithErrorMapping.ps1
+    
+    # Now you can call the function
+    Convert-JsonWithErrorMapping -JsonString $json
+    
+    # If you have JSON in a file, do this sequence:
+    $rawJSON = Get-Content $JSONfile -Raw
+    $processedJSON = Convert-JsonWithErrorMapping -JsonString $rawJSON
 
 .NOTES
-    Author: Your Name
-    Date: YYYY-MM-DD
+    Author: Ben Hurwitz
+    Email: bchurwitz+pixi_pyprojSetup@gmail.com
+    Date: 2025-May-10
     Version: 1.0.0
-    License: MIT (or other license)
+    License: GNU GPL v3.0 (see above)
+    Compatability: PowerShell 5.1 and 7
 #>
 
 function Convert-JsonWithErrorMapping {

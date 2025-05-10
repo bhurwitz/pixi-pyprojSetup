@@ -93,6 +93,9 @@ if defined DEBUG_LEVEL (
                 call :SafeExit
                 exit /b 1
             )
+            if !errorlevel! EQU 1 (
+                call :log "STATUS" "Debugging has been DISABLED."
+            )
             set /a "DEBUG_LEVEL=!errorlevel!-1"
         )
     )
@@ -767,7 +770,7 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
                 set "boilerplate=%CFG_boilerplatesDir%\%boilerplate_name%!ext!.%CFG_templateExt%
                 
                 REM 3.3.2 Append the appropriate comment character(s) by using the '.txt' boilerplate template (which was created earlier so it exists).
-                "%PWSH_PATH%" -NoProfile -File "%CFG_script_BPcommenting%" -Boilerplate "%boilerplate_txt_template%" -Extension "!ext!" -OutputFile "!boilerplate!" -Debug_Level %DEBUG_LEVEL%
+                "%PWSH_PATH%" -NoProfile -File "%CFG_script_BPcommenting%" -TargetFile "%boilerplate_txt_template%" -Extension "!ext!" -OutputFile "!boilerplate!" -Debug_Level %DEBUG_LEVEL%
                 
                 call :Log "debug2" "Boilerplate file: '!boilerplate!'"
                 echo.
@@ -1036,8 +1039,8 @@ if not defined EMAIL_DEFINED (
     call :Log "debug2" "Email was already defined as '!email_temp!', no prompt needed."
 )
 
-if defined VALIDATE 
-    if "%VALIDATE_BASELINE_DIR%=="" (
+if defined VALIDATE (
+    if "%VALIDATE_BASELINE_DIR%"=="" (
         call :Log "debug2" "CLI flag for validate was passed but the baseline directory seems to be empty."
         call :PromptForInput VALIDATE_BASELINE_DIR "Enter the absolute path to the directory you'd like to compare the generated directory to." "No validation is done here."
         call :Log "debug3" "VALIDATE_BASELINE_DIR set to '!VALIDATE_BASELINE_DIR!'."
@@ -1649,8 +1652,7 @@ goto SSH_loop
 echo.
 call :Linebreak "-"
 echo.
-
-
+goto :eof
 
 
 

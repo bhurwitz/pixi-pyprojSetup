@@ -54,7 +54,7 @@ REM The script for prepending the boilerplate.
 set "CFG_script_prepend=%CFG_scripts_dirPath%\prependToTarget.ps1"
 
 REM The script for properly commenting the boilerplate template. 
-set "CFG_script_BPcommenting=%CFG_scripts_dirPath%\Comment-Boilerplate.ps1"
+set "CFG_script_BPcommenting=%CFG_scripts_dirPath%\Comment-File.ps1"
 
 REM The full path to the directory with the boilerplate templates
 set "CFG_boilerplatesDir=%CFG_license_dirPath%\boilerplates"
