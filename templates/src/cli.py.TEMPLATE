@@ -13,20 +13,3 @@ def main():
     parser.add_argument("--{arg-name}", required=True) # EDIT THIS LINE
     args = parser.parse_args()
     print({main-function-name}(args.{arg-name})) # EDIT THIS LINE
-
-    
-"""
-Alternative method using the 3rd party 'typer' package.
-The 'Click' package is another option that could be used. 
-MUST BE 'add'd WITH PIXI.
-Probably needs adjustments.
-
-import typer
-
-def main(job: str = typer.Option(..., help="Job title")):
-    print(f"Generating resume for: {job}")
-
-if __name__ == "__main__":
-    typer.run(main)
-    
-"""

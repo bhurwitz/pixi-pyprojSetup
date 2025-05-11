@@ -57,6 +57,7 @@ Changelog formatting:
  - "Need" some error testing in the PS scripts and then error catching the main function. 
  - Should the placeholders be required to used braces to be replaced? Perhaps that character should be adjustable, or the exact placeholder string should be replaced without expectation of characters, e.g. if 'package' is the key, instead of replacing '{package}' it should replaced just 'package', so if you wanted to replace '{package}', the key in the placeholders file should be just that: '{package}'.
  - The boilerplate situation seems kinda dumb.
+ - Update cli.py with Typer? Or provide it as an option.
  
 ### Fixed
 
@@ -119,13 +120,13 @@ Changelog formatting:
      - 'Replace-Toml.ps1': Replaces lines within a .TOML file; used to update the 'authors' parameter from the Pixi-defined one to the user-passed ones.
  - Pixi is checked for upon startup.
  - Git output is suppressed, including warnings surrounding 'CRLF' and 'LF'.
- - A '.gitattributes' template file (in the 'templates' subdirectory) is used to define line-ending expectations.
  - Git 'safecrlf' is disabled.
  - The 'authors' line in 'pyproject.toml', which is originally set via Pixi at the system level, is replaced automatically by the passed author name and email, which allows the user to adjust their name or email per package.
  - A directory tree comparison PowerShell method is implemented, lives in the scripts directory, activates when the 'validate' flag is passed with a path to a root to compare the generated directory tree with.
  - Double checks the given parent\package path for viability before writing.
  - A new input confirmation loop subroutine is implemented.
- - Updated nearly all the templates:
+ - Updated templates:
+     - A '.gitattributes' template file is used to define line-ending expectations.
      - A '.gitignore' template is provided.
      - New directories (config and scripts) are available
      - The '__init__.py' template now has the version and author variables defined within the template with placeholders, rather than being appended to the files via 'echo'. 

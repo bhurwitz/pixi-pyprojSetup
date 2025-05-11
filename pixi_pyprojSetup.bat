@@ -821,9 +821,9 @@ if errorlevel 1 (
 :: The default 'pyproject.toml' file needs some updating after all this setup work.
 :modifyTomlFile
 
-"%PWSH_PATH%" -NoProfile -File "%CFG_script_toml_insert%" -ConfigFile "%config_dirPath%\toml_insert.config" -Debug_Level %DEBUG_LEVEL%
+"%PWSH_PATH%" -NoProfile -File "%CFG_script_toml_insert%" -ConfigFile "%config_dirPath%\Insert-Toml.config" -Debug_Level %DEBUG_LEVEL%
 
-"%PWSH_PATH%" -NoProfile -File "%CFG_script_toml_replace%" -ConfigFile "%config_dirPath%\toml_replace.config" -Debug_Level %DEBUG_LEVEL%
+"%PWSH_PATH%" -NoProfile -File "%CFG_script_toml_replace%" -ConfigFile "%config_dirPath%\Replace-Toml.config" -Debug_Level %DEBUG_LEVEL%
 
 "%PWSH_PATH%" -NoProfile -File "%CFG_script_replacePlaceholders%" -InputFile "%TOML_FILE%" -OutputFile "%TOML_FILE%" -PlaceholdersFile "%placeholders%" -Debug_Level %DEBUG_LEVEL%
 

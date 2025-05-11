@@ -2,7 +2,11 @@
 # Allows the package to be executed by 'python -m <package>'
 # cli.py is required to exist in the 'src' directory.
 
-from {package}.cli import main
+from {package}.cli import run_cli
 
-if __name__ == "__main__":
+def main():
+    # Entry point for the CLI
+    run_cli()
+
+if __name__ == "__main__":  
     main()

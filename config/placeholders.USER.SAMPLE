@@ -26,8 +26,8 @@
 
 # Adjust these as desired (but they are common within the templates, so probably don't delete them.)
 ################# 
-author=CHANGE_THIS_IN_PLACEHOLDERS.USER
-email=CHANGE_THIS_IN_PLACEHOLDERS.USER
+author=CHANGE_THIS_IN_PLACEHOLDERS.USER.SAMPLE
+email=CHANGE_THIS_IN_PLACEHOLDERS.USER.SAMPLE
 #################
 
 

@@ -37,17 +37,27 @@ REM ================================================================
 REM Advanced settings, probably don't need to change these.
 REM ================================================================
 
+REM The standardized naming structure for boilerplate files WITHOUT the extension.
+REM Note that '{license_spdx}' will be replaced in the script with the correct user-selected value.
+set "CFG_boilerplate_name={license_spdx}_boilerplate"
+
+REM Template file extension identified (the final extension for any template file)
+set "CFG_templateExt=TEMPLATE"
+
+REM The name of the directory (not the path) in which the licenses live.
+set "CFG_license_dirName=_licenses"
+
 REM The maximum nesting depth for placeholders.
 set "CFG_max_placeholder_depth=10"
 
 REM The full path to the directory that stores the templates for copying and processing.
-set "CFG_templates_dirPath=%CD%\templates"
+set "CFG_templates_dirPath=%~dp0..\templates"
+
+REM The full path to the directory that stores the various utility scripts that run.
+set "CFG_scripts_dirPath=%~dp0..\scripts"
 
 REM Full path to the directory in which the licenses live.
 set "CFG_license_dirPath=%CFG_templates_dirPath%\%CFG_license_dirName%
-
-REM The full path to the directory that stores the various utility scripts that run.
-set "CFG_scripts_dirPath=%CD%\scripts"
 
 REM The script for inserting into a TOML file.
 set "CFG_script_toml_insert=%CFG_scripts_dirPath%\Insert-Toml.ps1"
@@ -66,16 +76,6 @@ set "CFG_script_BPcommenting=%CFG_scripts_dirPath%\Comment-File.ps1"
 
 REM The full path to the directory with the boilerplate templates
 set "CFG_boilerplatesDir=%CFG_license_dirPath%\boilerplates"
-
-REM The standardized naming structure for boilerplate files WITHOUT the extension.
-REM Note that '{license_spdx}' will be replaced in the script with the correct user-selected value.
-set "CFG_boilerplate_name={license_spdx}_boilerplate"
-
-REM Template file extension identified (the final extension for any template file)
-set "CFG_templateExt=TEMPLATE"
-
-REM The name of the directory (not the path) in which the licenses live.
-set "CFG_license_dirName=_licenses"
 
 
 
