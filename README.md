@@ -1,27 +1,18 @@
-Ben Hurwitz <bchurwitz+pixi_newPyProject@gmail.com>, 2025
-
-This script generates a set of files and folder for the PyPI-style project (i.e. src-layout) with Pixi, the package and dependency manager, creates a git repository locally, and then pushes the repo to GitHub. 
-
-Note: the script is kept within the 'pixi_pyprojSetup' directory so that it is tracked by git, and I have a shortcut externally that allows me to run it without worrying about directories. Just run it with '.lnk' at the end of the file name, i.e. 'pixi_pyprojSetup.bat.lnk'.
-
-
- - If you want to adjust the boilerplate text, delete all the BP files for that license EXCEPT for the .txt one. Adjust that one, and then let the script re-generate the rest.
- 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-% File: README.md
-%
-% Description: An overview of this project: what it is, how to use it, and who to thank.
-%
-% Note from GitHub: The README "should contain only the necessary information for developers to get started using and contributing to your project. Longer documentation is best suited for wikis."
-%
-% -----------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+% File: README.md  
+%  
+% Description: An overview of this project: what it is, how to use it, and who to thank.  
+%  
+% Note from GitHub: The README "should contain only the necessary information for developers to get started using and contributing to your project. Longer documentation is best suited for wikis."  
+%  
+% -----------------------------------------------------------------------------  
 
 # Package: pixi_pyprojSetup
 
 A Batch script that generates a src-layout Python package directory structure with Pixi package management and a 'pyproject.toml' manifest file.
 
 ## Badges
-% Shields for things like version, license, build status, Python version, etc. 
+<!--Shields for things like version, license, build status, Python version, etc. -->
 
 
 # Table of Contents
@@ -70,9 +61,9 @@ The only exceptions to this copying are files that are within explicitly exclude
 "Placeholders" are strings within the various templates that are replaced during the copying/processing sequence with a specifically mapped alternative string. So, for example, the string '{package}' (no quotes) would be replaced with 'MyPackage' (also no quotes), assuming your new package is called 'MyPackage'. These placeholdes must be wrapped in curly braces '{ }' within the template to be replaced. 
 
 Most of these placeholder-replacement mappings are assigned via a three-level hierarchy: 
-    1. The defaults are saved within the 'pixi_pyprojSetup\config\placeholders.DEFAULT' file and should be left alone;
-    2. These are initially overridden by mappings defined in the 'pixi_pyprojSetup\config\placeholders.USER' file; and finally
-    3. The priority assignment is given via CLI parameters as double-quoted "key=value" pairs.
+1. The defaults are saved within the 'pixi_pyprojSetup\config\placeholders.DEFAULT' file and should be left alone;
+2. These are initially overridden by mappings defined in the 'pixi_pyprojSetup\config\placeholders.USER' file; and finally
+3. The priority assignment is given via CLI parameters as double-quoted "key=value" pairs.
 The exception here is the package name, the repo name, and the short description, which will be prompted for if not set via CLI arguments.
 
 The user should set placeholders and their replacements within the 'placeholders.USER' file with a single mapping per line; care should be taken to no include extraneous whitespace. Note that they do not to be defined with the curly braces; those are used to identify the placeholders within the template files. Arbitrary placeholders may be defined within this folder and used within the templates, and users may pass any placeholder-replacement mapping via the CLI as well.
@@ -86,26 +77,26 @@ Located in the 'pixi_pyprojSetup\config', this file stores both user-adjustable 
 ## TOML config files
 There are two TOML-related JSON-styled configuration files within the 'pixi_pyprojSetup\config' subdirectory. 
 
-    1. 'Insert-Toml.config' passes parameters to the PowerShell script for insertion into the 'pyproject.toml' file. 
-        - "File": The target .toml file. This is, by default, given as a relative path because the script cd's into the new-package directory automatically, which is where the manifest file lives.
-        - "Insertions": A list of inserted lines. These are given in this file in the JSON syntax, but will be inserted with the proper TOML syntax. Each pair will be inserted on a single line in the order provided.
-        - "Anchor": The location within the TOML file above which the insertions will occur.
-        - "Debug": An integer to define the verbosity of any output; allowable values are 0 (no extraneous output) to 4 (so much output), with most output starting at level '2'.
-    
-    2. 'Replace-Toml.config' passes parameters to the PowerShell script for replacement of lines within the 'pyproject.toml' manifest file.
-        - "File": The target .toml file. This is, by default, given as a relative path because the script cd's into the new-package directory automatically, which is where the manifest file lives.
-        - "Replacements": A JSON-list. The script will locate the key in the target TOML file and replace that line with the line provided here, assuming the key exists. (The script will only look for keys to the left of the equals sign on a given TOML-file line.)
-        - "Debug": An integer to define the verbosity of any output; allowable values are 0 (no extraneous output) to 4 (so much output), with most output starting at level '2'.
+1. 'Insert-Toml.config' passes parameters to the PowerShell script for insertion into the 'pyproject.toml' file. 
+    - "File": The target .toml file. This is, by default, given as a relative path because the script cd's into the new-package directory automatically, which is where the manifest file lives.
+    - "Insertions": A list of inserted lines. These are given in this file in the JSON syntax, but will be inserted with the proper TOML syntax. Each pair will be inserted on a single line in the order provided.
+    - "Anchor": The location within the TOML file above which the insertions will occur.
+    - "Debug": An integer to define the verbosity of any output; allowable values are 0 (no extraneous output) to 4 (so much output), with most output starting at level '2'.
+
+2. 'Replace-Toml.config' passes parameters to the PowerShell script for replacement of lines within the 'pyproject.toml' manifest file.
+    - "File": The target .toml file. This is, by default, given as a relative path because the script cd's into the new-package directory automatically, which is where the manifest file lives.
+    - "Replacements": A JSON-list. The script will locate the key in the target TOML file and replace that line with the line provided here, assuming the key exists. (The script will only look for keys to the left of the equals sign on a given TOML-file line.)
+    - "Debug": An integer to define the verbosity of any output; allowable values are 0 (no extraneous output) to 4 (so much output), with most output starting at level '2'.
 
         
 ## Licenses and Boilerplates
 All license and boilerplate files live within the 'templates\_licenses' and 'templates\_licenses\boilerplates' subdirectories; these files are identified by their SPDX license identifier (<https://spdx.org/licenses/>). 
 
-    1. License files should be plain-text files named with the following structure: 'license_<SPDX-identifier>.txt'. Any license file added within the '_licenses' subdirectory will be available for adoption by the new package. By default, the user will be prompted for one of the available options, though an SPDX identifier can be passed with the 'license' CLI parameter to override this prompt, or be set within the user's 'placeholder' file.
-    
-    2. A boilerplate file, in the context of this project, are license-identification text-files that are prepended to the top of most of the template files after copying. Generally they simply note that the file is under the license of the project and gives a copyright, though the GNU GPL v3.0 goes a bit further. Boilerplate files should be named according to the following structure: '<SPDX-identifier>_boilerplate.<ext>.TEMPLATE', where the <ext> identifies the character marking that comments out the boilerplate text. For example, "MIT_boilerplate.py.TEMPLATE" is commented out using the hashtag character ('#'), as that's how lines are commented in '.py' files.
-    
-    If you would like to adjust the boilerplate text for a given licensing schema, adjust the '<SPDX-identifier>.txt.TEMPLATE' file as you'd like for the license SPDX in question, and then delete all the other boilerplate files for that license. The script will call 'Comment-File.ps1' to generate the correctly-commented boilerplate file for each template being processed, so there's no need for you to comment or generate anything beyond the '.txt' variant (without any comment characters). 
+1. License files should be plain-text files named with the following structure: 'license_<SPDX-identifier>.txt'. Any license file added within the '_licenses' subdirectory will be available for adoption by the new package. By default, the user will be prompted for one of the available options, though an SPDX identifier can be passed with the 'license' CLI parameter to override this prompt, or be set within the user's 'placeholder' file.
+
+2. A boilerplate file, in the context of this project, are license-identification text-files that are prepended to the top of most of the template files after copying. Generally they simply note that the file is under the license of the project and gives a copyright, though the GNU GPL v3.0 goes a bit further. Boilerplate files should be named according to the following structure: '<SPDX-identifier>_boilerplate.<ext>.TEMPLATE', where the <ext> identifies the character marking that comments out the boilerplate text. For example, "MIT_boilerplate.py.TEMPLATE" is commented out using the hashtag character ('#'), as that's how lines are commented in '.py' files.
+
+If you would like to adjust the boilerplate text for a given licensing schema, adjust the '<SPDX-identifier>.txt.TEMPLATE' file as you'd like for the license SPDX in question, and then delete all the other boilerplate files for that license. The script will call 'Comment-File.ps1' to generate the correctly-commented boilerplate file for each template being processed, so there's no need for you to comment or generate anything beyond the '.txt' variant (without any comment characters). 
 
 
 # Development
