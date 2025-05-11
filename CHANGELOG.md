@@ -48,8 +48,7 @@ Changelog formatting:
  - Optional multi-module setup
  - Optional (probably with flags) to setup things like nox/tox, different optional directories, use certain packages (e.g. typer vs argparse), and the like. 
  - Flexible positional CLI arguments (rather than fixed position)
- - A CLI flag that forces a version of Powershell (do versions before 5.1 also have the same path?)
- - The BP Commenting script should not pass an output directory but a full path to the output file. Avoids some complication in the main script.
+ - A CLI flag that forces a version of Powershell (do versions before 5.1 also have the same path?). I'm not sure this matters since the script will run with 7 and 5.1.
  - Ask for packages to incorporate (with a list of options, likely, and probably a config file for each with a set of commands that need running to load them properly, and probably other settings like things to add to the gitignore), and then run the config commands.
  - Some way to deal with the fact that my 'comment-boilerplate' method offers three different commenting options, but only one can be saved for future use (because of the way I deal with BPs right now).
  - Passing pixi tasks, somehow, possibly with a config file. 
@@ -80,6 +79,12 @@ Changelog formatting:
 ## [0.7.0] - 2025-04-18
 
 ### Added
+ - Debugging levels added (1, 2, 3, and 4). Debugging level can be set either globally (e.g. 'set DEBUG_LEVEL=2' in the CLI before running the script) or as a CLI parameter (e.g. '--debug=2'). 
+ - New CLI parameters:
+     - 'debug=<level>' sets the debugging level; 0 for off, 4 for too much debugging.
+     - 'validate=<path-to-baseline-root>' sets the validation baseline root directory; if set, the generated directory tree will be compared to this directory tree using 'Compare-FolderTreesAdvanced.ps1' for validation.
+     - '<placeholder>=<replacement>': any placeholder-replacement mapping, even unknown ones, can be set here.
+ - CLI parameters MUST be quoted, otherwise they won't be read properly. This is due to how Batch processes the arguments.
  - The 'placeholders' framework was completely revamped.
      - Default placeholders and their replacement values are defined in 'config\placeholders.DEFAULT'.
      - Users can overwrite the defaults and add their own in 'config\placeholders.USER'
@@ -87,6 +92,10 @@ Changelog formatting:
      - Any placeholder in braces, e.g. {package}, in a template file will be replaced with the mapped replacement value.
      - The finalized project-specific placeholders file lives in '<package>\config\placeholders.config'
      - Placeholders can be nested within each other up to ten deep.
+     - A number of new default placeholders have been defined.
+     - The 'project_name' placeholder is automatically set to the package name.
+ - Placeholder priority: defaults (from 'placeholders.DEFAULT') are overwritten by 'placeholders.USER' with are overwritten by CLI parameters.
+     - Three parameters ('package', 'repo_name', and 'description') has special requirements: they must be set via CLI or they will be prompted for. Because these are package-specific, setting them in the 'placeholders.USER' file won't be sufficient.
  - The templates directory has been expanded
      - Files within the 'templates\src' subdirectory will be copied into the '<package>\src\<package>' automatically.
      - Files and folders within the 'templates' directory tree that are in the 'excluded' lists in 'config\pixi-pyprojectSetup_config.cmd' ('CFG_excludeFiles' and 'CFG_excludeFolders', respectively) will not be copied over.
@@ -106,63 +115,47 @@ Changelog formatting:
      - 'Convert-JsonWithErrorMapping.ps1': Wraps the 'Convert-Json' PowerShell method in a try/catch block with some useful escaping information on errors.
      - 'PrependToTarget.ps1': Prepends an arbitrary number of strings and/or text from files to a given file; used to prepending boilerplate text.
      - 'ReplacePlaceholders.ps1': Replaces curly-brace-wrapped placeholders from a given file based on a placeholder-mapping file.
-     - ''
+     - 'Insert-Toml.ps1': Inserts lines into a .TOML file; used to insert the license filename, readme filename, and the description into the 'pyproject.toml' file.
+     - 'Replace-Toml.ps1': Replaces lines within a .TOML file; used to update the 'authors' parameter from the Pixi-defined one to the user-passed ones.
  - Pixi is checked for upon startup.
  - Git output is suppressed, including warnings surrounding 'CRLF' and 'LF'.
  - A '.gitattributes' template file (in the 'templates' subdirectory) is used to define line-ending expectations.
  - Git 'safecrlf' is disabled.
-
-
-
- - The '__init__.py' template now has the version and author variables defined within the template with placeholders, rather than being appended to the files via 'echo'. 
- - Pixi is checked for on startup, and the script quits if it's not there.
- - New 'config.bat' file is used for user-defined sensitive-and-fixed data, such as name and email. An example version is included in the repo but needs to be renamed when pulled. It is not included in any pushes. 
- - Added three optional arguement flags: --name, --email, and --default-parent-dir. These take the highest priority, followed by the values in 'config.bat'. The defaults are hardcoded into the script. 
- - {projRoot_dir} is a new placeholder string that will map to the project's root directory path. 
- - Updated like all of the templates:
-     - README got sections
-     - CHANGELOG added sections to the first revision
+ - The 'authors' line in 'pyproject.toml', which is originally set via Pixi at the system level, is replaced automatically by the passed author name and email, which allows the user to adjust their name or email per package.
+ - A directory tree comparison PowerShell method is implemented, lives in the scripts directory, activates when the 'validate' flag is passed with a path to a root to compare the generated directory tree with.
+ - Double checks the given parent\package path for viability before writing.
+ - A new input confirmation loop subroutine is implemented.
+ - Updated nearly all the templates:
+     - A '.gitignore' template is provided.
+     - New directories (config and scripts) are available
+     - The '__init__.py' template now has the version and author variables defined within the template with placeholders, rather than being appended to the files via 'echo'. 
+     - README.md got sections
+     - CHANGELOG now follows the 'Keep A Changelog v.1.1' structure with semantic versioning
      - cli.py, __main__.py, __init__.py, and main.py got preambles with a clear description
      - 'runPythonScript.bat' added a run argument '--run-as-script' that can be passed to run 'main.py' instead of '__main__.py', a second run argument called '--src-dir' that defines what the 'src' directory is called (defaults to 'src', should be a relative path from the root directory). It also got a preamble. 
- - The 'authors' line in 'pyproject.toml' is replaced with the name and email provided within this script rather than some other default. 
- - All configuration files now live in the 'config' subdirectory.
- - '--package', '--repo', '--author', '--email', and '--parent-dirPath' are all valid parameters. NO VALIDATION IS DONE.
- - The 'project name' will be set to the package name.
- - Multiple new project directories (config, data, docs, scripts, and tests) with associated template directories that can be filled as needed. Any file or folder placed into the templates dir will be copied to new projects. 
- 
- 
+ - Directories and files may be freely added by the user and will be copyied and processed into the new package directory.
 
- - A '.gitignore' template is provided.
- - The 'ReplacePlaceholders.ps1' now takes in the full file path to the output file and writes that. Avoids some chicanery around renaming, temp files, and deletions that was causing confusion.
- - If you want to adjust the boilerplate text, delete all the BP files for that license EXCEPT for the .txt one. Adjust that one, and then let the script re-generate the rest.
- - Debugging levels added (1, 2, 3, and 4). Debugging level can be set either globally ('set DEBUG_LEVEL=2' in the CLI before running the script) or as a CLI parameter ('--debug=2'). 
- - Printed statements should be clearer with labels identifying severity.
- - All CLI parameters passed MUST be quoted in their entirety, i.e. as "KEY=VALUE" or "--KEY=VALUE". 
- - Removed the 'repo-sameAs-package' flag. It was silly. 
- - Author and email have default values through placeholders, but if you delete those, the system will prompt for them. 
- - A new input confirmation loop subroutine is implemented.
- - Double checks the given parent\package path for viability before writing.
- - A directory tree comparison PS method is implemented and lives in the 'scripts' subdirectory.
- - A 'validate' flag is added that enabled directory creation comparion with a baseline to confirm 
 
 ### Fixed
 
 
 ### Changed
- - Some of the older underlying methods have been reworked a bit, mostly for clarity.
- - Introductory text is cleaner and slightly rearranged. 
+ - Most of the underlying methods were reworked for clarity and flow. Many were converted to PowerShell scripts, including the TOML insertion, TOML replacements, placeholder replacements, commenting, and prepending.
+ - Print and debug statements are made much clearer and more useful (hopefully)
  - The placeholder system was revamped using an external 'placeholders.env' file coupled with a PS script 'replacePlaceholders.ps1' to enable adding new placeholders without adjusting code. All the old placeholders still function as before. 
- - Moved the .toml file insertions and replacements to external scripts that allow for user adjustments through their associated config files.
  - Reworked the copying methodology for easier understanding.
  - Added additional debugging functionality.
+ - Moved the .toml file insertions and replacements to external scripts that allow for user adjustments through their associated config files.
  - Boilerplate commeting method is now a PS script and can be called with an arbitrary number of files and/or strings to prepend (in order).
+ - The 'ReplacePlaceholders.ps1' now takes in the full file path to the output file and writes that. Avoids some chicanery around renaming, temp files, and deletions that was causing confusion.
 
 ### Deprecated
- - String prepending isn't long for this world. It still exist, and may continue to exist, but it isn't used any more and may be removed in future versions. 
- - {absPath} is no longer the preferred placeholder for the project root directory; it's now {projRoot_dir}.
+
  
 ### Removed
  - 'tool.pytest.ini_options' removed from the .toml file, as I'm not using pytest and wanted to retain flexibility (and not confuse anything). 
+ - Removed the 'repo-sameAs-package' flag. It was silly. 
+  - {absPath} is no longer available as a placeholder for the project root directory; it's now {projRoot_dir}.
  
  
 ### Security
