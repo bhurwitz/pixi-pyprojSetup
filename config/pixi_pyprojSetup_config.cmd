@@ -71,12 +71,13 @@ set "CFG_license_dirName=_licenses"
 
 REM Specify folder names to exclude from copying.
 REM When a folder name contains spaces, enclose it in quotes.
-set "CFG_excludeFolders="%CFG_license_dirName%" "_miscNotCopied""\
+set "CFG_excludeFolders="%CFG_license_dirName%" "_miscNotCopied""
 
 REM Specify file names to exclude from copying
 set "CFG_excludeFiles="file one.txt" "file2.cfg""
 
 
+set "CFG_noBoilerplate=".gitignore" "readme.md" "changelog.md" ".gitattributes""
 
 REM ================================================================
 REM Return value, DO NOT CHANGE

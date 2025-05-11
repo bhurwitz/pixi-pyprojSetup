@@ -57,6 +57,7 @@ Changelog formatting:
  - There's probably a nice way to print messages around a function. I thought about using 'log' with a new severity level and 'call %~3' to call the subroutine as a passed paramter, but I didn't want to dedicate time to testing that.
  - "Need" some error testing in the PS scripts and then error catching the main function. 
  - Should the placeholders be required to used braces to be replaced? Perhaps that character should be adjustable, or the exact placeholder string should be replaced without expectation of characters, e.g. if 'package' is the key, instead of replacing '{package}' it should replaced just 'package', so if you wanted to replace '{package}', the key in the placeholders file should be just that: '{package}'.
+ - The boilerplate situation seems kinda dumb.
  
 ### Fixed
 
@@ -79,11 +80,29 @@ Changelog formatting:
 ## [0.7.0] - 2025-04-18
 
 ### Added
- - Added a '/debug' flag that can be passed with the script for more detailed printouts. By default it's not set.
- - Files that are copied into the '{project}\src\{project}' directory should now live in '_templates\src'. Otherwise, they will get copied to the project root. 
- - Any file with the extension '.TEMPLATE' in the "_templates" directory or the 'src' subdirectory will be copied over to the project directory (or it's 'src\{project}' subdirectory) with properly-commented boilerplate text and placeholder-strings replaced. 
- - Boilerplate text files will now live in the '_templates\boilerplates' directory. A main boilerplate file for each license is expected (a basic one is generated if it doesn't exist), and then commented ones for each file type will be generated as they're seen in the copying loop (assuming they don't already exist) and placed in here. Commented boilerplates will be identified within the script, so there's no need to delete them or add custom ones - they're named '<license>_boilerplate<ext>', where <ext> is the file extension.
- - {version} is now an accepted placeholder for templates and will be replaced with the version written into the .toml file by default (typically set to 0.1.0). 
+ - The 'placeholders' framework was completely revamped.
+     - Default placeholders and their replacement values are defined in 'config\placeholders.DEFAULT'.
+     - Users can overwrite the defaults and add their own in 'config\placeholders.USER'
+     - Those, in turn, can be overwritten through the CLI by passing '<placeholder>=<replacement>' for a given placeholder and replacement pair. These do not need to be pre-defined in one of the 'placeholder' files, either.
+     - Any placeholder in braces, e.g. {package}, in a template file will be replaced with the mapped replacement value.
+     - The finalized project-specific placeholders file lives in '<package>\config\placeholders.config'
+     - Placeholders can be nested within each other up to ten deep.
+ - The templates directory has been expanded
+     - Files within the 'templates\src' subdirectory will be copied into the '<package>\src\<package>' automatically.
+     - Files and folders within the 'templates' directory tree that are in the 'excluded' lists in 'config\pixi-pyprojectSetup_config.cmd' ('CFG_excludeFiles' and 'CFG_excludeFolders', respectively) will not be copied over.
+     - All other files and folders will be copied as located in the tree, e.g. files in the 'templates\config' directory will be copied into '<package>\config'. 
+ - Licenses and boilerplates
+     - License files now live in 'templates\_licenses' with nomeclature defined by the license's SPDX code: 'license_<spdx-code>.txt'
+     - Boilerplate files now live in 'templates\_licenses\boilerplates' and are named as '<spdx-code>_boilerplate.<ext>.TEMPLATE', where the <ext> defines the commenting character. There is no need to make these manually; the script will generate them if needed based on the '<spdx-code>_boilerplate.txt.TEMPLATE' file. If that doesn't exist, the script will generate a basic one first (though you can absolutely make your own). 
+ - New configuration files in the 'config' subdirectory
+     - 'NoBoilerplateFiles.config' stores a list of files that will not have any boilerplate appended to them. This defaults to '.gitignore', 'README.md', and 'CHANGELOG.md'.
+ - Pixi is checked for upon startup.
+ - Git output is suppressed, including warnings surrounding 'CRLF' and 'LF'.
+ - A '.gitattributes' template file (in the 'templates' subdirectory) is used to define line-ending expectations.
+ - Git 'safecrlf' is disabled.
+
+
+
  - The '__init__.py' template now has the version and author variables defined within the template with placeholders, rather than being appended to the files via 'echo'. 
  - Pixi is checked for on startup, and the script quits if it's not there.
  - New 'config.bat' file is used for user-defined sensitive-and-fixed data, such as name and email. An example version is included in the repo but needs to be renamed when pulled. It is not included in any pushes. 
@@ -95,19 +114,13 @@ Changelog formatting:
      - cli.py, __main__.py, __init__.py, and main.py got preambles with a clear description
      - 'runPythonScript.bat' added a run argument '--run-as-script' that can be passed to run 'main.py' instead of '__main__.py', a second run argument called '--src-dir' that defines what the 'src' directory is called (defaults to 'src', should be a relative path from the root directory). It also got a preamble. 
  - The 'authors' line in 'pyproject.toml' is replaced with the name and email provided within this script rather than some other default. 
- - The entire placeholder system was revamped, allowing for users to define their own placeholders.
  - All configuration files now live in the 'config' subdirectory.
- - '--repo-sameAs-package' flag names the repo the same as the package.
  - '--package', '--repo', '--author', '--email', and '--parent-dirPath' are all valid parameters. NO VALIDATION IS DONE.
  - The 'project name' will be set to the package name.
- - The finalized placeholders file lives in the project's 'config' directory as 'placeholders.config'.
  - Multiple new project directories (config, data, docs, scripts, and tests) with associated template directories that can be filled as needed. Any file or folder placed into the templates dir will be copied to new projects. 
- - The new project directory will be virtually identical to the 'templates' directory, save for the 'templates\src' directory being made into '<newProject>\src\<newProject>' and the '_licenses' subdirectory being ignored.
- - Nested placeholders will now be processed in a single step up to 'maxIterations' deep, which defaults to 10.
- - Licenses and boilerplates are now moved into a subdirectory of templates call '_licenses'. 
- - All boilerplate files now have a '.TEMPLATE' extension, and are thus named '<SPDX-Code>_boilerplate.<ext>.TEMPLATE'
- - Boilerplate commeting method is now a PS script and can be called with an arbitrary number of files and/or strings to prepend (in order). 
- - A new config file, 'NoBoilerplateFiles.config', stores a list of files that will not have any boilerplate appended to them. This defaults to '.gitignore', 'README.md', and 'CHANGELOG.md'.
+ 
+ 
+
  - A '.gitignore' template is provided.
  - The 'ReplacePlaceholders.ps1' now takes in the full file path to the output file and writes that. Avoids some chicanery around renaming, temp files, and deletions that was causing confusion.
  - If you want to adjust the boilerplate text, delete all the BP files for that license EXCEPT for the .txt one. Adjust that one, and then let the script re-generate the rest.
@@ -131,6 +144,7 @@ Changelog formatting:
  - Moved the .toml file insertions and replacements to external scripts that allow for user adjustments through their associated config files.
  - Reworked the copying methodology for easier understanding.
  - Added additional debugging functionality.
+ - Boilerplate commeting method is now a PS script and can be called with an arbitrary number of files and/or strings to prepend (in order).
 
 ### Deprecated
  - String prepending isn't long for this world. It still exist, and may continue to exist, but it isn't used any more and may be removed in future versions. 

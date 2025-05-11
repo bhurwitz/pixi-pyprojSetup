@@ -731,14 +731,13 @@ for /R "%CFG_templates_dirPath%" %%F in (*) do (
         
         REM Next, we determine if the current file is on the 'No Boilerplate' list. If so, we'll just pass an empty string for the boilerplate.
         REM Loop through each non-comment ignore line from noBoilerplateFiles.config.
-        for /F "usebackq eol=# delims=" %%I in ("%config_dirPath%\noBoilerplateFiles.config") do (
+        set "FilenameWithoutTemplateExt=!filename:.%CFG_templateExt%=!" 
+        for %%E in (%CFG_noBoilerplate%) do (
+            REM %%~E removes surrounding quotes.
             if not defined noBP (
-                set "FilenameWithExt=%%~nxF"
-                REM set "FilenameWithoutTemplateExt=!FilenameWithExt:.TEMPLATE=!"
-                set "FilenameWithoutTemplateExt=!FilenameWithExt:.%CFG_templateExt%=!"
-                call :Log "debug3" "NoBP: does ignore-file '%%I' match current file '!FilenameWithoutTemplateExt!'?"
+                call :Log "debug3" "NoBP: does ignore-file '%%~E' match current file '!FilenameWithoutTemplateExt!'?"
                 REM Compare file names (case-insensitive).
-                if /I "%%I"=="!FilenameWithoutTemplateExt!" (
+                if /I "%%~E"=="!FilenameWithoutTemplateExt!" (
                     call :Log "debug1" "!FilenameWithoutTemplateExt! is on the 'No Boilerplates' list, so no boilerplate will be appended.
                     set "noBP=true"
                 )
