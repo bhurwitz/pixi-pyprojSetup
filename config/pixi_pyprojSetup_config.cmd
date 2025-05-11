@@ -21,7 +21,15 @@ REM ================================================================
 REM ================================================================
 REM Settings that are fine for typical users to adjust.
 REM ================================================================
+REM Specify folder names to exclude from copying.
+REM When a folder name contains spaces, enclose it in quotes.
+set "CFG_excludeFolders="%CFG_license_dirName%" "_miscNotCopied""
 
+REM Specify filenames to exclude from copying
+set "CFG_excludeFiles="file one.txt" "file2.cfg""
+
+REM Specify filenames to NOT add boilerplate to.
+set "CFG_noBoilerplate=".gitignore" "readme.md" "changelog.md" ".gitattributes""
 
 
 
@@ -42,16 +50,16 @@ REM The full path to the directory that stores the various utility scripts that 
 set "CFG_scripts_dirPath=%CD%\scripts"
 
 REM The script for inserting into a TOML file.
-set "CFG_script_toml_insert=%CFG_scripts_dirPath%\toml_insert.ps1"
+set "CFG_script_toml_insert=%CFG_scripts_dirPath%\Insert-Toml.ps1"
 
 REM The script for replacing lines within a TOML file.
-set "CFG_script_toml_replace=%CFG_scripts_dirPath%\toml_replace.ps1"
+set "CFG_script_toml_replace=%CFG_scripts_dirPath%\Replace-Toml.ps1"
 
 REM The script for placeholder replacement.
 set "CFG_script_replacePlaceholders=%CFG_scripts_dirPath%\ReplacePlaceholders.ps1"
 
 REM The script for prepending the boilerplate.
-set "CFG_script_prepend=%CFG_scripts_dirPath%\prependToTarget.ps1"
+set "CFG_script_prepend=%CFG_scripts_dirPath%\PrependToTarget.ps1"
 
 REM The script for properly commenting the boilerplate template. 
 set "CFG_script_BPcommenting=%CFG_scripts_dirPath%\Comment-File.ps1"
@@ -69,15 +77,7 @@ set "CFG_templateExt=TEMPLATE"
 REM The name of the directory (not the path) in which the licenses live.
 set "CFG_license_dirName=_licenses"
 
-REM Specify folder names to exclude from copying.
-REM When a folder name contains spaces, enclose it in quotes.
-set "CFG_excludeFolders="%CFG_license_dirName%" "_miscNotCopied""
 
-REM Specify filenames to exclude from copying
-set "CFG_excludeFiles="file one.txt" "file2.cfg""
-
-REM Specify filenames to NOT add boilerplate to.
-set "CFG_noBoilerplate=".gitignore" "readme.md" "changelog.md" ".gitattributes""
 
 REM ================================================================
 REM Return value, DO NOT CHANGE

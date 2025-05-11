@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #>
 
-<# prependToTarget.ps1
+<# PrependToTarget.ps1
 .SYNOPSIS
     Prepends an arbitrary number of strings and/or text from files to a target.
 

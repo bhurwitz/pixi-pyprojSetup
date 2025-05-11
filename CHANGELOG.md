@@ -94,8 +94,19 @@ Changelog formatting:
  - Licenses and boilerplates
      - License files now live in 'templates\_licenses' with nomeclature defined by the license's SPDX code: 'license_<spdx-code>.txt'
      - Boilerplate files now live in 'templates\_licenses\boilerplates' and are named as '<spdx-code>_boilerplate.<ext>.TEMPLATE', where the <ext> defines the commenting character. There is no need to make these manually; the script will generate them if needed based on the '<spdx-code>_boilerplate.txt.TEMPLATE' file. If that doesn't exist, the script will generate a basic one first (though you can absolutely make your own). 
- - New configuration files in the 'config' subdirectory
-     - 'NoBoilerplateFiles.config' stores a list of files that will not have any boilerplate appended to them. This defaults to '.gitignore', 'README.md', and 'CHANGELOG.md'.
+ - New configuration files in the 'config' subdirectory:
+     - 'pixi-pyprojectSetup_config.cmd': stores lists of files and folders to be excluded from copying operations, a list of files to NOT add boilerplate text to, and a number of relative paths to scripts.
+     - 'placeholders.DEFAULT': the default placeholder-replacement mapping file.
+     - 'placeholders.USER.SAMPLE': the user-set placeholder-replacement mapping file. The '.SAMPLE' extension should be removed prior to running the script.
+     - 'toml_insert.config': a JSON file that defines parameters for insertion into the 'pyproject.toml' file.
+     - 'toml-replace.config': a JSON file that defines parameters for replacement within the 'pyproject.toml' file.
+ - PowerShell scripts are located in the 'scripts' subdirectory:
+     - 'Comment-File.ps1': Comments out an entire file; used for creating new boilerplate files.
+     - 'Compare-FolderTreesAdvanced.ps1': Compares two directory trees; used for validation of the generated tree, if desired.
+     - 'Convert-JsonWithErrorMapping.ps1': Wraps the 'Convert-Json' PowerShell method in a try/catch block with some useful escaping information on errors.
+     - 'PrependToTarget.ps1': Prepends an arbitrary number of strings and/or text from files to a given file; used to prepending boilerplate text.
+     - 'ReplacePlaceholders.ps1': Replaces curly-brace-wrapped placeholders from a given file based on a placeholder-mapping file.
+     - ''
  - Pixi is checked for upon startup.
  - Git output is suppressed, including warnings surrounding 'CRLF' and 'LF'.
  - A '.gitattributes' template file (in the 'templates' subdirectory) is used to define line-ending expectations.
