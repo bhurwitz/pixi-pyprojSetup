@@ -1,11 +1,11 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-% File: README.md  
-%  
-% Description: An overview of this project: what it is, how to use it, and who to thank.  
-%  
-% Note from GitHub: The README "should contain only the necessary information for developers to get started using and contributing to your project. Longer documentation is best suited for wikis."  
-%  
-% -----------------------------------------------------------------------------  
+<!--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+<!-- File: README.md   -->
+<!--   -->
+<!-- Description: An overview of this project: what it is, how to use it, and who to thank.  --> 
+<!--   -->
+<!-- Note from GitHub: The README "should contain only the necessary information for developers to get started using and contributing to your project. Longer documentation is best suited for wikis."   -->
+<!--   -->
+<!--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% --> 
 
 # Package: pixi_pyprojSetup
 
